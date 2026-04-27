@@ -4,8 +4,8 @@ Análisis exploratorio y modelado de la abundancia de mosquitos Aedes.
 
 ## Contenido
 
-- `Grupo5.qmd`: documento principal
-- `script.R`: código del análisis
+- `AE_Zuur.R`: código del análisis
+- `AE_Zuur.qmd`: documento principal
 - `aedes_data.xlsx`: base de datos
 
 ## Estado del trabajo

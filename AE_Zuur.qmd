@@ -14,7 +14,9 @@ Carga de datos
 library(readxl)
 library(car)
 
-datos <- read_excel("aedes_data.xlsx")
+datos <- suppressWarnings(
+  read_excel("aedes_data.xlsx")
+)
 dim(datos)
 ```
 

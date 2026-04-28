@@ -10,8 +10,9 @@ Análisis exploratorio y modelado de la abundancia de mosquitos Aedes.
 
 ## Estado del trabajo
 
-- Análisis exploratorio completo
-- Pendiente: modelado
+- Análisis exploratorio completo (Ariel)
+- Modelado de prevalencia v.1 (Ariel)
+- Pendiente: modelado de abundancia
 
 ## Organización del trabajo
 

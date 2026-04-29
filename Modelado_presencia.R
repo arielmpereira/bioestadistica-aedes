@@ -91,6 +91,19 @@ colSums(is.na(datos_mod))
 # Modelo de prevalencia (logístico)
 # =========================================
 
+# Ecuación del modelo de presencia (GLMM binomial)
+
+# logit(p) = β0 + β1 * temp_std + β2 * pH_std + β3 * logvol_std + β4 * Season + u
+
+# - p: probabilidad de presencia de larvas.
+# - β0: intercepto (condición de referencia).
+# - β1–β3: efectos de temperatura, pH y volumen.
+# - β4: efecto de la estación.
+# - u: variabilidad entre visitas (grilla:estación).
+
+# El error está dado por la distribución binomial, no aparece explícito como en un modelo lineal.
+
+
 modelo1_presencia <- glmer(
   Prevalence ~ temp_std + pH_std + logvol_std + Season + (1 | Grid_no),
   data = datos_mod,

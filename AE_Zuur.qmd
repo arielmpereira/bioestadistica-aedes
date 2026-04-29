@@ -100,7 +100,7 @@ hist(ae$`Aedes albopictus`, main="Aedes albopictus")
 
 ```
 
-En las variables de abundancia, la gran cantidad de ceros genera una fuerte asimetría, lo que provoca que los boxplots resulten poco informativos (cajas comprimidas en torno a cero). Por este motivo, se opta por no utilizarlos para estas variables y analizar la distribución mediante proporción de ceros e histogramas.
+En las variables de abundancia, la gran cantidad de ceros genera una fuerte asimetría, lo que provoca que los boxplots resulten poco informativos (cajas achatdas en torno a cero). Por este motivo, se opta por no utilizarlos para estas variables y analizar la distribución mediante proporción de ceros e histogramas.
 
 **Conclusiones:**
 
@@ -112,7 +112,7 @@ Se observa una alta proporción de ceros en las variables de abundancia, lo que 
 
 Se evaluó la homogeneidad de varianza mediante boxplots de las variables de abundancia en función de distintas variables explicativas.
 
-Dado que las variables de abundancia tienen exceso de ceros, esto achata los boxplots, para salvar este inconveniente y poder observar diferencias en los boxplot, se analiza la abundancia condicionada a la presencia.
+Dado que las variables de abundancia tienen exceso de ceros, esto achata los boxplots, para salvar este inconveniente y poder observar diferencias en los boxplot, se analiza la **abundancia condicionada a la presencia.**
 
 ```{r}
 ae_tot <- ae[ae$`Total mosquito emerged` > 0, ]
@@ -455,11 +455,13 @@ Esto indica que la estación no solo afecta el nivel de abundancia, sino que tam
 
 ## Paso 8: Independencia
 
-Se observa que existen múltiples mediciones dentro de una misma grilla, lo que indica dependencia espacial entre las observaciones.
+Las observaciones no son independientes debido a la forma en que se tomaron los datos.
 
-Además, las mediciones se realizaron en distintas estaciones del año, lo que introduce una posible dependencia temporal.
+Por un lado, dentro de cada grilla se realizaron muchas mediciones, por lo que esas observaciones comparten el mismo contexto ambiental.
 
-Por lo tanto, las observaciones no pueden considerarse completamente independientes y esta condición deberá tenerse en cuenta en el modelado.
+Por otro lado, cada grilla fue muestreada en 4 estaciones del año, generando grupos de mediciones correspondientes a cada visita (grilla-estación), donde las observaciones dentro de la misma visita son aún más similares entre sí.
+
+Esta estructura deberá ser tenida en cuenta en el modelado.
 
 ------------------------------------------------------------------------
 

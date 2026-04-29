@@ -509,16 +509,16 @@ boxplot(ae$`Total mosquito emerged` ~ ae$temp_grupo,
 # Paso 8: Independencia
 # ----------------------------
 
-# Se observa que existen múltiples mediciones dentro de una misma grilla, 
-# lo que indica dependencia espacial entre las observaciones.
+# Las observaciones no son independientes debido a la forma en que se tomaron los datos.
 
-# Además, las mediciones se realizaron en distintas estaciones del año, lo que 
-# introduce una posible dependencia temporal.
+# Por un lado, dentro de cada grilla se realizaron muchas mediciones,
+# por lo que esas observaciones comparten el mismo contexto ambiental.
 
-# Por lo tanto, las observaciones no pueden considerarse completamente 
-# independientes y esta condición deberá tenerse en cuenta en el modelado.
+# Por otro lado, cada grilla fue muestreada en 4 estaciones del año,
+# generando grupos de mediciones correspondientes a cada visita (grilla-estación),
+# donde las observaciones dentro de la misma visita son aún más similares entre sí.
 
-
+# Esta estructura deberá ser tenida en cuenta en el modelado.
 
 # ====================================
 # Conclusiones del análisis exploratorio

@@ -96,7 +96,7 @@ Se comparan dos estructuras de efectos aleatorios: una por grilla y otra por vis
 
 ```{r}
 modelo1_presencia <- glmer(
-  Prevalence ~ temp_std + pH_std + logvol_std + Season + (1 | Grid_no),
+  Prevalence ~ temp_std + pH_std + logvol_std + Season + (1 | Season) + (1 | Grid_no),
   data = datos_mod,
   family = binomial
 )
@@ -111,6 +111,17 @@ AIC(modelo1_presencia, modelo2_presencia)
 ```
 
 El modelo con efecto aleatorio por visita presenta un AIC mucho menor, por lo que se utiliza como modelo principal. Esto indica que la estructura grilla-estación captura mejor la dependencia de los datos que la grilla sola.
+
+```{r}
+length(unique(datos_mod$Grid_no:datos_mod$Season))
+
+length(unique(datos_mod$Grid_no))
+length(unique(datos_mod$Season))
+
+table(datos_mod$Grid_no, datos_mod$Season)
+```
+
+El modelo por visita (Grid_no:Season) ajusta mejor según AIC, pero el diseño de los datos es desbalanceado. Por eso también se considera el modelo con efectos separados como una alternativa más simple y robusta.
 
 ```{r}
 summary(modelo2_presencia)

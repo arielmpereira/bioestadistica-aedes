@@ -168,32 +168,45 @@ modelo_zinb <- glmmTMB(
 
 AIC(modelo_nb, modelo_zinb)
 
+
+# ==========================
+# Diagnóstico de modelos con DHARMa
+# ==========================
+
+# Simula residuos del modelo.
+# DHARMa compara lo que el modelo predice con lo que realmente se observó.
+
 res_nb <- simulateResiduals(modelo_nb)
 res_zinb <- simulateResiduals(modelo_zinb)
+
+# Gráficos diagnósticos generales.
+# Sirve para ver si los residuos tienen patrones raros, problemas de ajuste,
+# outliers o desviaciones fuertes.
 
 x11()
-testZeroInflation(res_nb)
-testZeroInflation(res_zinb)
-
-
-# Diagnostico con DHARMa
-
-
-# NB
-res_nb <- simulateResiduals(modelo_nb)
 plot(res_nb)
 
-# ZINB
-res_zinb <- simulateResiduals(modelo_zinb)
+x11()
 plot(res_zinb)
+
+# Evalúa si el modelo genera una cantidad de ceros compatible con los datos.
+# Si el p-valor es bajo, el modelo no explica bien los ceros.
 
 testZeroInflation(res_nb)
 testZeroInflation(res_zinb)
+
+# Test de sobredispersión no explicada.
+# Si el p-valor es bajo, el modelo todavía no captura bien la variabilidad.
 
 testDispersion(res_nb)
 testDispersion(res_zinb)
 
+
+
+
+# =========================
 # Comparación de modelos
+# =========================
 
 # Se compararon modelos de binomial negativa (NB) y binomial negativa inflada en
 # ceros (ZINB) con distintas especificaciones para el componente de inflación de ceros.

@@ -18,6 +18,85 @@ dim(datos)
 seleccion = datos$`log volume` > 0 & datos$Grid_type == "Index"
 datos_clean <- datos[seleccion, ]
 
+# ==========================
+# RECONSTRUCCIÓN POR CRIADERO
+# ==========================
+
+# Dado que los datos originales se encuentran en formato largo (una fila por 
+# especie dentro de cada criadero), se reconstruyó la unidad de análisis a nivel
+# de criadero agrupando por identificador (Sl.no), con el fin de analizar la
+# abundancia total y garantizar la independencia de las observaciones.
+
+# ==============================
+# Reconstruir base por criadero
+# ==============================
+
+# Cada Sl.no representa un criadero.
+
+datos_criadero <- datos_clean %>%
+  group_by(Sl.no) %>%
+  summarise(
+    # Variables generales del criadero
+    Season = first(Season),
+    Grid_type = first(Grid_type),
+    Grid_no = first(Grid_no),
+    Macrohabitat = first(Macrohabitat),
+    Microhabitat = first(Microhabitat),
+    Temperature = first(Temperature),
+    pH = first(pH),
+    `log volume` = first(`log volume`),
+    Latititude = first(Latititude),
+    Longitude = first(Longitude),
+    
+    # Variables respuesta
+    Prevalence = max(Prevalence, na.rm = TRUE),
+    `Total mosquito emerged` = sum(`Total mosquito emerged`, na.rm = TRUE),
+    
+    # Abundancia por especie
+    `Aedes aegypti` = sum(`Aedes aegypti`, na.rm = TRUE),
+    `Aedes albopictus` = sum(`Aedes albopictus`, na.rm = TRUE),
+    `Aedes vitatus` = sum(`Aedes vitatus`, na.rm = TRUE),
+    `Anopheles culicifacies` = sum(`Anopheles culicifacies`, na.rm = TRUE),
+    `Anopheles sinensis` = sum(`Anopheles sinensis`, na.rm = TRUE),
+    `Anopheles stephensi` = sum(`Anopheles stephensi`, na.rm = TRUE),
+    `Anopheles vagus` = sum(`Anopheles vagus`, na.rm = TRUE),
+    `Anopheles varuna` = sum(`Anopheles varuna`, na.rm = TRUE),
+    `Culex bitaeniorhynchus` = sum(`Culex bitaeniorhynchus`, na.rm = TRUE),
+    `Culex gelidus` = sum(`Culex gelidus`, na.rm = TRUE),
+    `Culex mimeticus` = sum(`Culex mimeticus`, na.rm = TRUE),
+    `Culex quinquefasciatus` = sum(`Culex quinquefasciatus`, na.rm = TRUE),
+    `Culex tritaeniorhynchus` = sum(`Culex tritaeniorhynchus`, na.rm = TRUE),
+    `Tripteroides affinis` = sum(`Tripteroides affinis`, na.rm = TRUE),
+    `Tripteroides aranoides` = sum(`Tripteroides aranoides`, na.rm = TRUE),
+    `Armigeres subalbatus` = sum(`Armigeres subalbatus`, na.rm = TRUE)
+  )
+
+# Ahora calculo la riqueza de especies.
+# La riqueza cuenta cuántas especies distintas aparecen en cada criadero.
+
+datos_criadero$richness <- 
+  (datos_criadero$`Aedes aegypti` > 0) +
+  (datos_criadero$`Aedes albopictus` > 0) +
+  (datos_criadero$`Aedes vitatus` > 0) +
+  (datos_criadero$`Anopheles culicifacies` > 0) +
+  (datos_criadero$`Anopheles sinensis` > 0) +
+  (datos_criadero$`Anopheles stephensi` > 0) +
+  (datos_criadero$`Anopheles vagus` > 0) +
+  (datos_criadero$`Anopheles varuna` > 0) +
+  (datos_criadero$`Culex bitaeniorhynchus` > 0) +
+  (datos_criadero$`Culex gelidus` > 0) +
+  (datos_criadero$`Culex mimeticus` > 0) +
+  (datos_criadero$`Culex quinquefasciatus` > 0) +
+  (datos_criadero$`Culex tritaeniorhynchus` > 0) +
+  (datos_criadero$`Tripteroides affinis` > 0) +
+  (datos_criadero$`Tripteroides aranoides` > 0) +
+  (datos_criadero$`Armigeres subalbatus` > 0)
+
+
+# Guardamos la base para su uso posterior en el modelado
+write.csv(datos_criadero, "datos_criadero.csv", row.names = FALSE)
+
+
 # ----------------------------
 # Selección de variables para AE
 # ----------------------------
@@ -35,9 +114,10 @@ datos_clean <- datos[seleccion, ]
 # pH
 # log volume
 
-ae <- datos_clean[, c(
+ae <- datos_criadero[, c(
   "Prevalence",
   "Total mosquito emerged",
+  "richness",
   "Aedes aegypti",
   "Aedes albopictus",
   "Season",

@@ -1,18 +1,24 @@
 ---
-title: "Grupo5_Bio"
+title: "Analisis Exploratorio del paper"
 format: html
 editor: visual
 ---
 
 Bioestadística
 
-# AE paper Aedes
+# Análisis Exploratorio  del paper
 
-Carga de datos
+Determinants of *Aedes* mosquito larval ecology in a heterogeneous urban environment- a longitudinal study in Bengaluru, India
+
+<https://doi.org/10.1371/journal.pntd.0011702>
+
+## Carga de datos
 
 ```{r}
+
 library(readxl)
 library(car)
+library(dplyr)
 
 datos <- suppressWarnings(
   read_excel("aedes_data.xlsx")
@@ -20,7 +26,96 @@ datos <- suppressWarnings(
 dim(datos)
 ```
 
-## Paso 0: Filtrado e inspección inicial
+## Paso 0: Filtrado y reconstrucción de la base
+
+Nos quedamos solamente con los criaderos activos (log volume \>0) y los datos longitudinales (Grid_type == Index)
+
+```{r}
+seleccion = datos$`log volume` > 0 & datos$Grid_type == "Index"
+datos_clean <- datos[seleccion, ]
+```
+
+Dado que los datos originales se encuentran en formato largo (una fila por especie dentro de cada criadero), se reconstruyó la unidad de análisis a nivel de criadero agrupando por identificador (Sl.no), con el fin de analizar la abundancia total.
+
+```{r}
+# ==============================
+# Reconstruir base por criadero
+# ==============================
+
+# Cada Sl.no representa un criadero.
+
+datos_criadero <- datos_clean %>%
+  group_by(Sl.no) %>%
+  summarise(
+    # Variables generales del criadero
+    Season = first(Season),
+    Grid_type = first(Grid_type),
+    Grid_no = first(Grid_no),
+    Macrohabitat = first(Macrohabitat),
+    Microhabitat = first(Microhabitat),
+    Temperature = first(Temperature),
+    pH = first(pH),
+    `log volume` = first(`log volume`),
+    Latititude = first(Latititude),
+    Longitude = first(Longitude),
+    
+    # Variables respuesta
+    Prevalence = max(Prevalence, na.rm = TRUE),
+    `Total mosquito emerged` = sum(`Total mosquito emerged`, na.rm = TRUE),
+    
+    # Abundancia por especie
+    `Aedes aegypti` = sum(`Aedes aegypti`, na.rm = TRUE),
+    `Aedes albopictus` = sum(`Aedes albopictus`, na.rm = TRUE),
+    `Aedes vitatus` = sum(`Aedes vitatus`, na.rm = TRUE),
+    `Anopheles culicifacies` = sum(`Anopheles culicifacies`, na.rm = TRUE),
+    `Anopheles sinensis` = sum(`Anopheles sinensis`, na.rm = TRUE),
+    `Anopheles stephensi` = sum(`Anopheles stephensi`, na.rm = TRUE),
+    `Anopheles vagus` = sum(`Anopheles vagus`, na.rm = TRUE),
+    `Anopheles varuna` = sum(`Anopheles varuna`, na.rm = TRUE),
+    `Culex bitaeniorhynchus` = sum(`Culex bitaeniorhynchus`, na.rm = TRUE),
+    `Culex gelidus` = sum(`Culex gelidus`, na.rm = TRUE),
+    `Culex mimeticus` = sum(`Culex mimeticus`, na.rm = TRUE),
+    `Culex quinquefasciatus` = sum(`Culex quinquefasciatus`, na.rm = TRUE),
+    `Culex tritaeniorhynchus` = sum(`Culex tritaeniorhynchus`, na.rm = TRUE),
+    `Tripteroides affinis` = sum(`Tripteroides affinis`, na.rm = TRUE),
+    `Tripteroides aranoides` = sum(`Tripteroides aranoides`, na.rm = TRUE),
+    `Armigeres subalbatus` = sum(`Armigeres subalbatus`, na.rm = TRUE)
+  )
+
+# Calculo la coocurrencia de especies.
+# Variable booleana que es 1 si hay mas de una especie en el mismo criadero.
+# Y 0 si hay 0 o 1 especie
+
+datos_criadero$coocurrencia <- 
+  (
+    (datos_criadero$`Aedes aegypti` > 0) +
+    (datos_criadero$`Aedes albopictus` > 0) +
+    (datos_criadero$`Aedes vitatus` > 0) +
+    (datos_criadero$`Anopheles culicifacies` > 0) +
+    (datos_criadero$`Anopheles sinensis` > 0) +
+    (datos_criadero$`Anopheles stephensi` > 0) +
+    (datos_criadero$`Anopheles vagus` > 0) +
+    (datos_criadero$`Anopheles varuna` > 0) +
+    (datos_criadero$`Culex bitaeniorhynchus` > 0) +
+    (datos_criadero$`Culex gelidus` > 0) +
+    (datos_criadero$`Culex mimeticus` > 0) +
+    (datos_criadero$`Culex quinquefasciatus` > 0) +
+    (datos_criadero$`Culex tritaeniorhynchus` > 0) +
+    (datos_criadero$`Tripteroides affinis` > 0) +
+    (datos_criadero$`Tripteroides aranoides` > 0) +
+    (datos_criadero$`Armigeres subalbatus` > 0)
+  ) > 1
+
+# Convertimos F/T en 0/1
+datos_criadero$coocurrencia <- as.numeric(datos_criadero$coocurrencia)
+
+```
+
+### Guardamos la base para su uso en el modelado
+
+```{r}
+write.csv(datos_criadero, "datos_criadero.csv", row.names = FALSE)
+```
 
 **Selección de variables para AE**
 
@@ -38,16 +133,12 @@ dim(datos)
 |                            | -   pH                    |
 |                            |                           |
 |                            | -   log volume            |
+|                            |                           |
+|                            | -   co_ocurrence          |
 +----------------------------+---------------------------+
 
 ```{r}
-# Nos quedamos solamente con los criaderos activos (log volume >0)
-# y los datos longitudinales (Grid_type == Index)
-
-seleccion = datos$`log volume` > 0 & datos$Grid_type == "Index"
-datos_clean <- datos[seleccion, ]
-
-ae <- datos_clean[, c(
+ae <- datos_criadero[, c(
   "Prevalence",
   "Total mosquito emerged",
   "Aedes aegypti",
@@ -60,7 +151,8 @@ ae <- datos_clean[, c(
   "log volume",
   "Grid_no",
   "Latititude",
-  "Longitude"
+  "Longitude",
+  "coocurrencia"
 )]
 
 # Convertimos las variables categorias en factor
@@ -110,9 +202,7 @@ Se observa una alta proporción de ceros en las variables de abundancia, lo que 
 
 ## Paso 2: Homogeneidad de la varianza
 
-Se evaluó la homogeneidad de varianza mediante boxplots de las variables de abundancia en función de distintas variables explicativas.
-
-Dado que las variables de abundancia tienen exceso de ceros, esto achata los boxplots, para salvar este inconveniente y poder observar diferencias en los boxplot, se analiza la **abundancia condicionada a la presencia.**
+Dado que las variables de abundancia tienen exceso de ceros, esto achata los boxplots, para salvar este inconveniente y poder observar diferencias en los boxplot, se analiza la **abundancia condicionada a la presencia** (se eliminan los ceros).
 
 ```{r}
 ae_tot <- ae[ae$`Total mosquito emerged` > 0, ]
@@ -143,7 +233,7 @@ Al analizar únicamente los valores positivos, se observan diferencias en la dis
 
 -   Aedes aegypti presenta un patrón similar al total, con presencia en varias estaciones.
 
--   En cambio, Aedes albopictus muestra un comportamiento más concentrado, con mayor abundancia en july–september y baja presencia en el resto.
+-   En cambio, Aedes albopictus muestra un comportamiento más concentrado, con mayor abundancia en april-june y baja presencia en el resto.
 
 Ambas especies muestran dinámicas diferentes, por lo que el uso de la abundancia total podría ocultar patrones específicos.
 
@@ -153,7 +243,7 @@ Ambas especies muestran dinámicas diferentes, por lo que el uso de la abundanci
 
 Se analizó la distribución de las variables respuesta.
 
--   Prevalence: variable dicotómica (0/1), con predominio de ceros (81%), lo que indica baja frecuencia de presencia.
+-   Prevalence: variable dicotómica (0/1), con predominio de ceros (71%), lo que indica baja frecuencia de presencia.
 
 -   Total mosquito emerged: presenta una distribución altamente asimétrica, con fuerte concentración en valores cercanos a cero y una cola larga hacia valores altos.
 
@@ -183,11 +273,12 @@ mean(ae$`Aedes albopictus` == 0)
 
 boxplot(ae$Temperature ~ (ae$`Total mosquito emerged` > 0))
 boxplot(ae$`log volume` ~ (ae$`Total mosquito emerged` > 0))
+boxplot(ae$pH ~ (ae$`Total mosquito emerged` > 0))
 ```
 
 Si bien se eliminaron los criaderos sin agua (log volume = 0), aún se observa una alta proporción de ceros en las variables de abundancia. Estos ceros podrían responder a distintos procesos.
 
-Por un lado, es posible que existan ceros estructurales, asociados a condiciones ambientales que limitan completamente la presencia de mosquitos. Sin embargo, el análisis de variables como la temperatura muestra un alto solapamiento entre observaciones con y sin presencia, lo que sugiere que estas variables por sí solas no permiten identificar claramente dichos casos.
+Por un lado, es posible que existan ceros estructurales, asociados a condiciones ambientales que limitan la presencia de mosquitos. Sin embargo, el análisis de variables como la temperatura muestra un alto solapamiento entre observaciones con y sin presencia, lo que sugiere que estas variables por sí solas no permiten identificar claramente dichos casos.
 
 Por otro lado, se observan ceros biológicos, donde, aun existiendo condiciones potencialmente favorables, no se registra presencia de mosquitos.
 
@@ -400,11 +491,11 @@ axis(1, at = 1:length(prom_vol), labels = names(prom_vol), las = 2)
 
 ```
 
-En cuanto a la prevalencia, se observan patrones no lineales en función de las variables ambientales. La probabilidad de prevalencia tiende a concentrarse en ciertos rangos de temperatura, presenta un comportamiento no lineal respecto al pH, y aumenta con el logaritmo del volumen de agua.
+En cuanto a la prevalencia, se observan patrones no lineales en función de las variables ambientales (Fig. 1). La probabilidad de prevalencia tiende a concentrarse en ciertos rangos de temperatura, presenta un comportamiento no lineal respecto al pH, y aumenta con el logaritmo del volumen de agua.
 
-En relación a la abundancia (considerando únicamente valores positivos), también se observan patrones no lineales. Se identifican máximos en rangos intermedios de temperatura y volumen, así como variaciones no lineales en función del pH.
+En relación a la abundancia (Fig. 2), también se observan patrones no lineales. Se identifican máximos en rangos intermedios de temperatura y volumen, así como variaciones no lineales en función del pH.
 
-Se observan diferencias en los patrones entre Aedes aegypti y Aedes albopictus, lo que sugiere que ambas especies responden de manera distinta a las condiciones ambientales.
+Se observan diferencias en los patrones entre Aedes aegypti y Aedes albopictus (Fig 3 y 4), lo que sugiere que ambas especies responden de manera distinta a las condiciones ambientales.
 
 Esto indica que no es adecuado asumir un comportamiento similar entre especies y que esta diferencia deberá considerarse en el modelado.
 

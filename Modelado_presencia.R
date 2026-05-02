@@ -111,7 +111,7 @@ modelo1_presencia <- glmer(
 )
 
 modelo2_presencia <- glmer(
-  Prevalence ~ temp_std + pH_std + logvol_std + Season + (1 | Grid_no:Season),
+  Prevalence ~ temp_std + pH_std + logvol_std + Season + (1 | Season)  + (1 | Grid_no),
   data = datos_mod,
   family = binomial
 )

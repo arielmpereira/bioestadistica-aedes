@@ -1,0 +1,832 @@
+---
+title: "Analisis exploratorio corregido del paper Aedes"
+format: html
+editor: visual
+---
+
+Bioestadistica
+
+# Analisis exploratorio corregido del paper
+
+Articulo: Dharmamuthuraja D, P. D. R, Lakshmi M. I, Isvaran K, Ghosh SK, Ishtiaq F. 2023. *Determinants of Aedes mosquito larval ecology in a heterogeneous urban environment- a longitudinal study in Bengaluru, India*. PLoS Neglected Tropical Diseases 17(11): e0011702.
+
+Este documento retoma la estructura del AE basado en Zuur et al. (2010), pero corrige dos decisiones iniciales importantes: la unidad de analisis y el filtrado de la base. En vez de comenzar eliminando los criaderos secos, primero se trabaja con toda la base. Despues se hace un analisis complementario con criaderos humedos y, como chequeo secundario, con las grillas `Index`.
+
+## Carga y preparacion de datos
+
+```{r}
+#| message: false
+#| warning: false
+
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(janitor)
+library(stringr)
+library(forcats)
+library(skimr)
+
+archivo_base <- "journal.pntd.0011702.s011.xlsx"
+
+excel_sheets(archivo_base)
+
+# Se lee como texto porque la columna de fecha mezcla seriales de Excel
+# con fechas escritas como dd-mm-aaaa.
+datos_raw <- read_excel(archivo_base, sheet = 1, col_types = "text")
+
+datos <- datos_raw %>%
+  clean_names() %>%
+  mutate(across(where(is.character), ~ str_squish(.x))) %>%
+  mutate(across(where(is.character), ~ na_if(.x, "")))
+
+dim(datos)
+names(datos)
+skim(datos)
+```
+
+```{r}
+extraer_numero <- function(x) {
+  x <- as.character(x)
+  x <- str_replace_all(x, ",", "")
+  as.numeric(str_extract(x, "-?[0-9]+\\.?[0-9]*"))
+}
+
+parsear_fecha_excel <- function(x) {
+  x <- str_squish(as.character(x))
+  x[x == ""] <- NA_character_
+  salida <- rep(as.Date(NA), length(x))
+
+  es_serial <- str_detect(x, "^[0-9]+\\.?[0-9]*$")
+  salida[es_serial & !is.na(x)] <- as.Date(
+    as.numeric(x[es_serial & !is.na(x)]),
+    origin = "1899-12-30"
+  )
+
+  formatos <- c("%d-%m-%Y", "%d/%m/%Y", "%d-%m-%y", "%d/%m/%y", "%Y-%m-%d", "%m/%d/%Y")
+  for (formato in formatos) {
+    falta <- is.na(salida) & !is.na(x)
+    salida[falta] <- as.Date(x[falta], format = formato)
+  }
+
+  salida
+}
+
+vars_conteo <- c(
+  "prevalence", "male", "female", "total_mosquito_emerged",
+  "aedes_aegypti", "aedes_albopictus", "aedes_vitatus",
+  "anopheles_culicifacies", "anopheles_sinensis", "anopheles_stephensi",
+  "anopheles_vagus", "anopheles_varuna",
+  "culex_bitaeniorhynchus", "culex_gelidus", "culex_mimeticus",
+  "culex_quinquefasciatus", "culex_tritaeniorhynchus",
+  "tripteroides_affinis", "tripteroides_aranoides",
+  "armigeres_subalbatus"
+)
+
+datos <- datos %>%
+  mutate(
+    collection_date = parsear_fecha_excel(collection_date),
+    sl_no = extraer_numero(sl_no),
+    grid_no = extraer_numero(grid_no),
+    latititude = extraer_numero(latititude),
+    longitude = extraer_numero(longitude),
+    prevalence_of_wet_dry_habitats = extraer_numero(prevalence_of_wet_dry_habitats),
+    capacity_num = extraer_numero(capacity_of_habitat_ml),
+    actual_water_num = extraer_numero(actual_level_of_water_ml),
+    final_volume_num = extraer_numero(final_volume_water_ml_without_cm),
+    log_volume_num = extraer_numero(log_volume),
+    temperature_num = extraer_numero(temperature),
+    ph_num = extraer_numero(p_h)
+  ) %>%
+  mutate(across(any_of(vars_conteo), ~ suppressWarnings(as.numeric(.x)))) %>%
+  mutate(
+    immatures_bin = case_when(
+      str_to_lower(immatures) %in% c("present", "presence", "yes", "y", "1") ~ 1,
+      str_to_lower(immatures) %in% c("absent", "absence", "no", "n", "0") ~ 0,
+      TRUE ~ suppressWarnings(as.numeric(immatures))
+    )
+  )
+
+range(datos$collection_date)
+sum(is.na(datos$collection_date))
+```
+
+## Unidad de analisis
+
+En la version inicial del AE se agrupaba por `Sl.no`, pero ese campo no identifica de manera unica un criadero. En la base completa hay muchos menos valores unicos de `Sl.no` que criaderos potenciales inspeccionados.
+
+```{r}
+n_filas <- nrow(datos)
+n_sl_no <- n_distinct(datos$sl_no)
+
+id_criadero <- c(
+  "season", "grid_type", "grid_no", "collection_date",
+  "latititude", "longitude", "container_number"
+)
+
+n_criaderos_clave <- datos %>%
+  distinct(across(all_of(id_criadero))) %>%
+  nrow()
+
+tibble(
+  indicador = c("filas_originales", "sl_no_unicos", "criaderos_clave_compuesta"),
+  n = c(n_filas, n_sl_no, n_criaderos_clave)
+)
+```
+
+Por eso, en este AE se define el criadero como el recipiente o habitat larval inspeccionado en una visita concreta. La clave aproximada combina estacion, grilla, fecha, coordenadas y numero de contenedor. No es una clave perfecta, pero es mucho mas cercana a la unidad ecologica del paper que `Sl.no`.
+
+```{r}
+duplicados_criadero <- datos %>%
+  count(across(all_of(id_criadero)), name = "n_filas") %>%
+  filter(n_filas > 1) %>%
+  arrange(desc(n_filas))
+
+duplicados_especie <- datos %>%
+  count(
+    collection_date, latititude, longitude,
+    breeding_habitat, microhabitat, container_number, species,
+    name = "n_filas"
+  ) %>%
+  filter(n_filas > 1) %>%
+  arrange(desc(n_filas))
+
+duplicados_exactos <- datos %>%
+  count(across(everything()), name = "n_filas") %>%
+  filter(n_filas > 1)
+
+duplicados_criadero
+duplicados_especie
+duplicados_exactos
+```
+
+## Reconstruccion a nivel criadero
+
+```{r}
+primer_no_na <- function(x) {
+  x <- x[!is.na(x)]
+  if (length(x) == 0) return(NA)
+  x[1]
+}
+
+max_no_na <- function(x) {
+  if (all(is.na(x))) return(NA_real_)
+  max(x, na.rm = TRUE)
+}
+
+sumar_conteo <- function(x) {
+  sum(x, na.rm = TRUE)
+}
+
+datos_criadero <- datos %>%
+  group_by(across(all_of(id_criadero))) %>%
+  summarise(
+    sl_no_originales = paste(sort(unique(sl_no)), collapse = "; "),
+    macrohabitat = primer_no_na(macrohabitat),
+    month = primer_no_na(month),
+    breeding_habitat = primer_no_na(breeding_habitat),
+    microhabitat = primer_no_na(microhabitat),
+    plant_species = primer_no_na(plant_species),
+    breeding_habitat_type = primer_no_na(breeding_habitat_type),
+    wet = primer_no_na(wet),
+    prevalence_wet_dry = max_no_na(prevalence_of_wet_dry_habitats),
+    capacity_num = primer_no_na(capacity_num),
+    actual_water_num = primer_no_na(actual_water_num),
+    final_volume_num = primer_no_na(final_volume_num),
+    log_volume_num = primer_no_na(log_volume_num),
+    temperature_num = primer_no_na(temperature_num),
+    ph_num = primer_no_na(ph_num),
+    prevalence = max_no_na(prevalence),
+    immatures_presencia = max_no_na(immatures_bin),
+    total_mosquito_emerged = sumar_conteo(total_mosquito_emerged),
+    aedes_aegypti = sumar_conteo(aedes_aegypti),
+    aedes_albopictus = sumar_conteo(aedes_albopictus),
+    aedes_vitatus = sumar_conteo(aedes_vitatus),
+    male = sumar_conteo(male),
+    female = sumar_conteo(female),
+    n_filas_originales = n(),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    aedes_total = aedes_aegypti + aedes_albopictus + aedes_vitatus,
+    aedes_presencia = if_else(aedes_total > 0, 1, 0),
+    mosquito_presencia = if_else(total_mosquito_emerged > 0, 1, 0),
+    wet_bin = if_else(wet == "Y", 1, 0, missing = NA_real_),
+    artificial_bin = if_else(breeding_habitat_type == "Artificial", 1, 0, missing = NA_real_)
+  )
+
+dim(datos)
+dim(datos_criadero)
+```
+
+## Faltantes e inconsistencias
+
+```{r}
+na_resumen <- datos %>%
+  summarise(across(everything(), ~ sum(is.na(.)))) %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "cantidad_na") %>%
+  mutate(porcentaje_na = 100 * cantidad_na / nrow(datos)) %>%
+  arrange(desc(porcentaje_na))
+
+na_resumen
+na_resumen %>% filter(porcentaje_na >= 20)
+```
+
+```{r}
+agua_por_condicion <- datos %>%
+  group_by(wet) %>%
+  summarise(
+    n = n(),
+    temperatura_cero = sum(temperature_num == 0, na.rm = TRUE),
+    ph_cero = sum(ph_num == 0, na.rm = TRUE),
+    volumen_cero = sum(final_volume_num == 0, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+chequeos_consistencia <- list(
+  secos_con_larvas = datos_criadero %>% filter(wet == "N", prevalence == 1),
+  humedos_con_agua_cero = datos_criadero %>%
+    filter(wet == "Y", temperature_num == 0 | ph_num == 0 | final_volume_num == 0),
+  secos_con_agua_positiva = datos_criadero %>%
+    filter(wet == "N", temperature_num > 0 | ph_num > 0 | final_volume_num > 0),
+  presencia_sin_emergidos = datos_criadero %>%
+    filter(prevalence == 1, total_mosquito_emerged == 0),
+  emergidos_sin_prevalencia = datos_criadero %>%
+    filter(prevalence == 0, total_mosquito_emerged > 0)
+)
+
+agua_por_condicion
+lapply(chequeos_consistencia, nrow)
+```
+
+La asociacion perfecta entre habitat seco y valores cero de volumen, temperatura y pH indica que esos ceros no deben leerse como errores numericos. En el marco de Blasco-Moreno et al. (2019), estos ceros tienen una interpretacion estructural o contextual: el habitat no estaba disponible como criadero acuatico.
+
+## Variables categoricas
+
+```{r}
+frecuencia <- function(base, variable) {
+  base %>%
+    count(.data[[variable]], name = "n") %>%
+    mutate(porcentaje = 100 * n / sum(n)) %>%
+    arrange(desc(n))
+}
+
+frecuencia(datos, "season")
+frecuencia(datos, "grid_type")
+frecuencia(datos, "macrohabitat")
+frecuencia(datos, "microhabitat")
+frecuencia(datos, "breeding_habitat_type")
+frecuencia(datos, "wet")
+frecuencia(datos, "species")
+```
+
+## Distribucion de las respuestas
+
+```{r}
+resumir_numericas <- function(base, variables) {
+  base %>%
+    summarise(
+      across(
+        all_of(variables),
+        list(
+          n = ~ sum(!is.na(.x)),
+          media = ~ mean(.x, na.rm = TRUE),
+          mediana = ~ median(.x, na.rm = TRUE),
+          varianza = ~ var(.x, na.rm = TRUE),
+          minimo = ~ min(.x, na.rm = TRUE),
+          maximo = ~ max(.x, na.rm = TRUE)
+        ),
+        .names = "{.col}__{.fn}"
+      )
+    ) %>%
+    pivot_longer(everything(), names_to = c("variable", ".value"), names_sep = "__")
+}
+
+vars_respuesta <- c(
+  "prevalence", "immatures_presencia", "total_mosquito_emerged",
+  "aedes_total", "aedes_aegypti", "aedes_albopictus"
+)
+
+resumen_respuestas <- resumir_numericas(datos_criadero, vars_respuesta)
+resumen_respuestas
+```
+
+```{r}
+#| fig-width: 7
+#| fig-height: 4
+
+datos_criadero %>%
+  select(all_of(vars_respuesta)) %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "valor") %>%
+  ggplot(aes(x = valor)) +
+  geom_histogram(bins = 30, color = "white") +
+  facet_wrap(~ variable, scales = "free") +
+  labs(x = "Valor", y = "Frecuencia")
+```
+
+## Ceros y sobredispersion
+
+```{r}
+diagnostico_conteo <- function(x, nombre_variable) {
+  x <- x[!is.na(x)]
+  media <- mean(x)
+  varianza <- var(x)
+
+  tibble(
+    variable = nombre_variable,
+    n = length(x),
+    cantidad_ceros = sum(x == 0),
+    proporcion_ceros = mean(x == 0),
+    media = media,
+    varianza = varianza,
+    indice_varianza_media = if_else(media == 0, NA_real_, varianza / media),
+    maximo = max(x)
+  )
+}
+
+vars_conteo_criadero <- c(
+  "total_mosquito_emerged", "aedes_total",
+  "aedes_aegypti", "aedes_albopictus"
+)
+
+diag_conteos <- bind_rows(
+  lapply(vars_conteo_criadero, function(v) diagnostico_conteo(datos_criadero[[v]], v))
+) %>%
+  mutate(
+    interpretacion = if_else(
+      indice_varianza_media > 1,
+      "Indicio de sobredispersion frente a Poisson",
+      "Sin indicio fuerte con este criterio"
+    )
+  )
+
+diag_conteos
+```
+
+Los conteos tienen una proporcion de ceros muy alta y una varianza muy superior a la media. Esto indica que un modelo Poisson simple seria insuficiente para una etapa posterior. La binomial negativa aparece como una alternativa natural; si ademas se decide modelar el proceso de ceros de forma separada, tambien podrian considerarse modelos hurdle o inflados en cero.
+
+## Exploracion por grupos
+
+```{r}
+resumen_estacion <- datos_criadero %>%
+  group_by(season) %>%
+  summarise(
+    n_criaderos = n(),
+    prevalencia_media = mean(prevalence, na.rm = TRUE),
+    abundancia_media = mean(total_mosquito_emerged, na.rm = TRUE),
+    aedes_media = mean(aedes_total, na.rm = TRUE),
+    ae_aegypti_media = mean(aedes_aegypti, na.rm = TRUE),
+    ae_albopictus_media = mean(aedes_albopictus, na.rm = TRUE),
+    prop_humedos = mean(wet_bin, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+resumen_macrohabitat <- datos_criadero %>%
+  group_by(macrohabitat) %>%
+  summarise(
+    n_criaderos = n(),
+    prevalencia_media = mean(prevalence, na.rm = TRUE),
+    abundancia_media = mean(total_mosquito_emerged, na.rm = TRUE),
+    aedes_media = mean(aedes_total, na.rm = TRUE),
+    ae_aegypti_media = mean(aedes_aegypti, na.rm = TRUE),
+    ae_albopictus_media = mean(aedes_albopictus, na.rm = TRUE),
+    prop_humedos = mean(wet_bin, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(prevalencia_media))
+
+resumen_microhabitat <- datos_criadero %>%
+  group_by(microhabitat) %>%
+  summarise(
+    n_criaderos = n(),
+    prevalencia_media = mean(prevalence, na.rm = TRUE),
+    abundancia_media = mean(total_mosquito_emerged, na.rm = TRUE),
+    aedes_media = mean(aedes_total, na.rm = TRUE),
+    ae_aegypti_total = sum(aedes_aegypti, na.rm = TRUE),
+    ae_albopictus_total = sum(aedes_albopictus, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(prevalencia_media))
+
+resumen_tipo_habitat <- datos_criadero %>%
+  group_by(breeding_habitat_type) %>%
+  summarise(
+    n_criaderos = n(),
+    prevalencia_media = mean(prevalence, na.rm = TRUE),
+    abundancia_media = mean(total_mosquito_emerged, na.rm = TRUE),
+    aedes_media = mean(aedes_total, na.rm = TRUE),
+    prop_humedos = mean(wet_bin, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+resumen_estacion
+resumen_macrohabitat
+resumen_microhabitat
+resumen_tipo_habitat
+```
+
+```{r}
+#| fig-width: 8
+#| fig-height: 4
+
+ggplot(datos_criadero, aes(x = season, y = prevalence)) +
+  stat_summary(fun = mean, geom = "bar") +
+  labs(x = "Estacion", y = "Prevalencia media")
+
+ggplot(
+  datos_criadero %>% mutate(macrohabitat = fct_reorder(as.factor(macrohabitat), prevalence, mean, na.rm = TRUE)),
+  aes(x = macrohabitat, y = prevalence)
+) +
+  stat_summary(fun = mean, geom = "bar") +
+  coord_flip() +
+  labs(x = "Macrohabitat", y = "Prevalencia media")
+
+ggplot(
+  datos_criadero %>% mutate(microhabitat = fct_reorder(as.factor(microhabitat), prevalence, mean, na.rm = TRUE)),
+  aes(x = microhabitat, y = prevalence)
+) +
+  stat_summary(fun = mean, geom = "bar") +
+  coord_flip() +
+  labs(x = "Microhabitat", y = "Prevalencia media")
+```
+
+## Abundancia condicionada a presencia
+
+Esta parte rescata una idea util del AE inicial: mirar la abundancia solo entre criaderos con conteos positivos. No reemplaza el analisis de ceros, pero ayuda a pensar un modelo de dos procesos: presencia/ausencia y abundancia condicionada a presencia.
+
+```{r}
+ae_tot_pos <- datos_criadero %>% filter(total_mosquito_emerged > 0)
+ae_aeg_pos <- datos_criadero %>% filter(aedes_aegypti > 0)
+ae_albo_pos <- datos_criadero %>% filter(aedes_albopictus > 0)
+
+tibble(
+  respuesta = c("total_mosquito_emerged", "aedes_aegypti", "aedes_albopictus"),
+  n_positivos = c(nrow(ae_tot_pos), nrow(ae_aeg_pos), nrow(ae_albo_pos))
+)
+```
+
+```{r}
+#| fig-width: 8
+#| fig-height: 5
+
+datos_criadero %>%
+  select(season, microhabitat, macrohabitat, total_mosquito_emerged, aedes_aegypti, aedes_albopictus) %>%
+  pivot_longer(
+    c(total_mosquito_emerged, aedes_aegypti, aedes_albopictus),
+    names_to = "respuesta",
+    values_to = "conteo"
+  ) %>%
+  filter(conteo > 0) %>%
+  ggplot(aes(x = season, y = conteo)) +
+  geom_boxplot(outlier.alpha = 0.4) +
+  facet_wrap(~ respuesta, scales = "free_y") +
+  labs(x = "Estacion", y = "Conteo positivo")
+```
+
+## Analisis complementario: criaderos humedos e Index
+
+El filtrado `log volume > 0` no se usa como punto de partida del control general de la base, porque elimina los habitats secos y borra ceros estructurales. Sin embargo, a partir de la sugerencia del docente, este filtro se vuelve central para mostrar si sigue habiendo muchos ceros aun despues de sacar los recipientes sin agua. Esa es justamente la situacion que puede justificar modelos inflados en cero.
+
+```{r}
+datos_humedos_modelos <- datos_criadero %>%
+  filter(final_volume_num > 0) %>%
+  mutate(
+    temperature_z = as.numeric(scale(temperature_num)),
+    ph_z = as.numeric(scale(ph_num)),
+    log_volume_z = as.numeric(scale(log_volume_num))
+  )
+
+ceros_humedos <- tibble(
+  filas_base_completa = nrow(datos_criadero),
+  filas_humedas = nrow(datos_humedos_modelos),
+  ceros_total = sum(datos_humedos_modelos$total_mosquito_emerged == 0),
+  prop_ceros_total = mean(datos_humedos_modelos$total_mosquito_emerged == 0),
+  ceros_aegypti = sum(datos_humedos_modelos$aedes_aegypti == 0),
+  prop_ceros_aegypti = mean(datos_humedos_modelos$aedes_aegypti == 0),
+  ceros_albopictus = sum(datos_humedos_modelos$aedes_albopictus == 0),
+  prop_ceros_albopictus = mean(datos_humedos_modelos$aedes_albopictus == 0)
+)
+
+ceros_humedos
+```
+
+La interpretacion de este subconjunto es clave. Si aun entre criaderos con agua quedan muchos ceros, entonces no todos los ceros se explican por ausencia de agua. Puede haber criaderos disponibles pero no colonizados, diferencias temporales, limitaciones del muestreo o condiciones ecologicas no capturadas por temperatura, pH y volumen.
+
+Como analisis secundario, tambien puede mirarse el subconjunto `Grid_type == "Index"`, que es mas comparable con la parte longitudinal del articulo.
+
+```{r}
+datos_humedos_index <- datos_humedos_modelos %>%
+  filter(grid_type == "Index")
+
+tibble(
+  filas_humedas_index = nrow(datos_humedos_index),
+  prop_ceros_total = mean(datos_humedos_index$total_mosquito_emerged == 0),
+  prop_ceros_aegypti = mean(datos_humedos_index$aedes_aegypti == 0),
+  prop_ceros_albopictus = mean(datos_humedos_index$aedes_albopictus == 0)
+)
+```
+
+## Modelos inflados en cero
+
+Para responder al pedido del docente, se ajustan tres modelos de conteo inflados en cero, uno para cada respuesta: abundancia total de mosquitos emergidos, abundancia de *Aedes aegypti* y abundancia de *Aedes albopictus*. Los modelos se ajustan sobre criaderos con agua y usan variables numericas estandarizadas: temperatura, pH y logaritmo del volumen.
+
+Ademas de los modelos inflados en cero, se ajustan modelos Poisson y binomial negativo simples para comparar AIC. Esta comparacion no es el analisis final del TP, pero ayuda a mostrar por que Poisson es insuficiente y por que la binomial negativa o los modelos inflados en cero son candidatos razonables.
+
+```{r}
+#| message: false
+#| warning: false
+
+if (!requireNamespace("pscl", quietly = TRUE)) {
+  stop("Instalar el paquete pscl para correr zeroinfl(): install.packages('pscl')")
+}
+
+if (!requireNamespace("MASS", quietly = TRUE)) {
+  stop("Instalar el paquete MASS para correr glm.nb().")
+}
+
+ajustar_modelos_conteo <- function(respuesta, base) {
+  formula_glm <- as.formula(
+    paste(respuesta, "~ temperature_z + ph_z + log_volume_z")
+  )
+
+  formula_zi <- as.formula(
+    paste(respuesta, "~ temperature_z + ph_z + log_volume_z | temperature_z + ph_z + log_volume_z")
+  )
+
+  m_poisson <- glm(formula_glm, data = base, family = poisson())
+  m_nb <- MASS::glm.nb(formula_glm, data = base)
+  m_zip <- pscl::zeroinfl(formula_zi, data = base, dist = "poisson")
+  m_zinb <- pscl::zeroinfl(formula_zi, data = base, dist = "negbin")
+
+  list(
+    poisson = m_poisson,
+    nb = m_nb,
+    zip = m_zip,
+    zinb = m_zinb
+  )
+}
+
+respuestas_modelo <- c(
+  "total_mosquito_emerged",
+  "aedes_aegypti",
+  "aedes_albopictus"
+)
+
+modelos_conteo <- lapply(
+  respuestas_modelo,
+  ajustar_modelos_conteo,
+  base = datos_humedos_modelos
+)
+names(modelos_conteo) <- respuestas_modelo
+
+comparacion_modelos <- bind_rows(
+  lapply(names(modelos_conteo), function(resp) {
+    tibble(
+      respuesta = resp,
+      modelo = names(modelos_conteo[[resp]]),
+      AIC = sapply(modelos_conteo[[resp]], AIC)
+    )
+  })
+) %>%
+  arrange(respuesta, AIC)
+
+comparacion_modelos
+```
+
+```{r}
+resumen_modelos_zinb <- bind_rows(
+  lapply(names(modelos_conteo), function(resp) {
+    coef_count <- coef(summary(modelos_conteo[[resp]]$zinb))$count
+    coef_zero <- coef(summary(modelos_conteo[[resp]]$zinb))$zero
+
+    bind_rows(
+      as.data.frame(coef_count) %>%
+        tibble::rownames_to_column("termino") %>%
+        mutate(respuesta = resp, componente = "conteo"),
+      as.data.frame(coef_zero) %>%
+        tibble::rownames_to_column("termino") %>%
+        mutate(respuesta = resp, componente = "cero_inflado")
+    )
+  })
+)
+
+resumen_modelos_zinb
+```
+
+Los AIC permiten comparar modelos ajustados sobre la misma respuesta y la misma base. En estos datos, los modelos Poisson tienen peor ajuste. Los modelos binomiales negativos mejoran mucho, lo que confirma sobredispersion. Los modelos inflados en cero, especialmente ZINB, permiten evaluar si ademas de sobredispersion hay un proceso extra generando ceros.
+
+## Interpretacion de la comparacion de modelos
+
+El resultado importante no es solamente que haya muchos ceros en la base completa. Esa primera lectura esta muy influida por los recipientes secos, que no son habitats disponibles para larvas acuaticas. Por eso, el filtro a criaderos humedos es central: luego de sacar los recipientes sin agua, los ceros siguen siendo muy frecuentes. Esto indica que el exceso de ceros no se explica solamente por la falta de agua.
+
+El modelo Poisson se conserva como punto de comparacion, pero queda descartado como modelo principal porque asume una relacion media-varianza que no se cumple. Los conteos presentan sobredispersion clara y, ademas, el AIC de Poisson es muy superior al del resto de los modelos.
+
+El modelo binomial negativo es una mejora importante porque permite varianza mayor que la media. Por eso baja mucho el AIC respecto de Poisson y queda como una alternativa razonable. Sin embargo, no separa explicitamente el proceso que genera ceros extra; absorbe parte de ese problema aumentando la variabilidad del conteo.
+
+El modelo ZIP incorpora un componente de ceros extra, pero mantiene una distribucion Poisson para la parte de conteo. En estos datos mejora respecto de Poisson, pero no alcanza a competir con NB o ZINB porque sigue sin resolver bien la sobredispersion.
+
+El modelo ZINB combina las dos necesidades: sobredispersion e inflacion de ceros. Por eso es el candidato mas completo para una etapa posterior. En nuestra comparacion tuvo el menor AIC para las tres respuestas. De todos modos, esta conclusion debe tomarse como exploratoria: no significa que el ZINB sea el modelo final cerrado, sino que los datos justifican seriamente evaluar modelos inflados en cero.
+
+## Avance sobre relaciones no lineales
+
+El docente tambien pidio pensar como modelar relaciones no lineales de temperatura, pH y volumen. Una forma razonable de hacerlo es comparar efectos lineales contra splines naturales de baja complejidad. En este avance usamos `df = 3`, para permitir curvatura sin volver el modelo demasiado flexible. Las variables numericas siguen estandarizadas.
+
+```{r}
+ajustar_seguro <- function(expr) {
+  tryCatch(
+    suppressWarnings(expr),
+    error = function(e) e
+  )
+}
+
+aic_seguro <- function(modelo) {
+  if (inherits(modelo, "error")) return(NA_real_)
+  AIC(modelo)
+}
+
+comparar_lineal_spline <- function(respuesta, base) {
+  formula_nb_spline <- as.formula(
+    paste(
+      respuesta,
+      "~ splines::ns(temperature_z, df = 3) +",
+      "splines::ns(ph_z, df = 3) +",
+      "splines::ns(log_volume_z, df = 3)"
+    )
+  )
+
+  formula_zinb_spline <- as.formula(
+    paste(
+      respuesta,
+      "~ splines::ns(temperature_z, df = 3) +",
+      "splines::ns(ph_z, df = 3) +",
+      "splines::ns(log_volume_z, df = 3) |",
+      "temperature_z + ph_z + log_volume_z"
+    )
+  )
+
+  nb_spline <- ajustar_seguro(MASS::glm.nb(formula_nb_spline, data = base))
+  zinb_spline <- ajustar_seguro(
+    pscl::zeroinfl(
+      formula_zinb_spline,
+      data = base,
+      dist = "negbin",
+      control = pscl::zeroinfl.control(maxit = 1000)
+    )
+  )
+
+  aic_nb_lineal <- comparacion_modelos %>%
+    filter(.data$respuesta == .env$respuesta, modelo == "nb") %>%
+    pull(AIC)
+
+  aic_zinb_lineal <- comparacion_modelos %>%
+    filter(.data$respuesta == .env$respuesta, modelo == "zinb") %>%
+    pull(AIC)
+
+  valores_aic <- c(
+    aic_nb_lineal,
+    aic_seguro(nb_spline),
+    aic_zinb_lineal,
+    aic_seguro(zinb_spline)
+  )
+
+  tibble(
+    respuesta = respuesta,
+    modelo = c("NB lineal", "NB con splines", "ZINB lineal", "ZINB con splines"),
+    AIC = valores_aic,
+    convergio = !is.na(valores_aic)
+  )
+}
+
+comparacion_lineal_spline <- bind_rows(
+  lapply(respuestas_modelo, comparar_lineal_spline, base = datos_humedos_modelos)
+) %>%
+  arrange(respuesta, AIC)
+
+comparacion_lineal_spline
+```
+
+En esta comparacion preliminar, los splines no mejoraron el AIC frente al ZINB lineal. Esto no descarta por completo relaciones no lineales, pero indica que con pocos positivos y muchos ceros conviene avanzar con modelos parsimoniosos y usar splines solo si aportan mejora clara y estabilidad.
+
+## Colinealidad entre variables abioticas
+
+```{r}
+datos_humedos <- datos_criadero %>% filter(wet == "Y")
+
+vars_abioticas <- datos_humedos %>%
+  select(final_volume_num, log_volume_num, temperature_num, ph_num)
+
+summary(vars_abioticas)
+cor(vars_abioticas, use = "pairwise.complete.obs")
+```
+
+```{r}
+#| fig-width: 6
+#| fig-height: 6
+
+pairs(vars_abioticas)
+```
+
+```{r}
+# VIF solo como diagnostico exploratorio de colinealidad.
+# No se interpreta el lm como modelo biologico final.
+if (requireNamespace("car", quietly = TRUE)) {
+  modelo_vif <- lm(total_mosquito_emerged ~ temperature_num + ph_num + log_volume_num, data = datos_humedos)
+  car::vif(modelo_vif)
+}
+```
+
+Las correlaciones son bajas a moderadas. La relacion mas alta esperable es entre volumen y log volumen, porque una variable se deriva de la otra. Para modelos posteriores conviene no incluir volumen crudo y log volumen juntos.
+
+## Relaciones preliminares Y-X
+
+```{r}
+resumen_por_cortes <- function(base, x, y, n_cortes = 6) {
+  base %>%
+    mutate(grupo = cut(.data[[x]], breaks = n_cortes)) %>%
+    group_by(grupo) %>%
+    summarise(
+      n = n(),
+      media_y = mean(.data[[y]], na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    mutate(variable_x = x, respuesta = y)
+}
+
+relaciones_presencia <- bind_rows(
+  resumen_por_cortes(datos_humedos, "temperature_num", "prevalence"),
+  resumen_por_cortes(datos_humedos, "ph_num", "prevalence"),
+  resumen_por_cortes(datos_humedos, "log_volume_num", "prevalence")
+)
+
+relaciones_abundancia <- bind_rows(
+  resumen_por_cortes(ae_tot_pos, "temperature_num", "total_mosquito_emerged"),
+  resumen_por_cortes(ae_tot_pos, "ph_num", "total_mosquito_emerged"),
+  resumen_por_cortes(ae_tot_pos, "log_volume_num", "total_mosquito_emerged")
+)
+
+relaciones_presencia
+relaciones_abundancia
+```
+
+```{r}
+#| fig-width: 8
+#| fig-height: 4
+
+ggplot(relaciones_presencia, aes(x = grupo, y = media_y, group = variable_x)) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(~ variable_x, scales = "free_x") +
+  labs(x = "Intervalo", y = "Prevalencia media") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(relaciones_abundancia, aes(x = grupo, y = media_y, group = variable_x)) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(~ variable_x, scales = "free_x") +
+  labs(x = "Intervalo", y = "Abundancia media positiva") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+Estos graficos no prueban relaciones causales ni reemplazan un modelo. Sirven para detectar posibles formas no lineales y para decidir si en una etapa posterior conviene modelar temperatura, pH o volumen con terminos no lineales.
+
+## Coocurrencia de especies
+
+La coocurrencia se recalcula a nivel criadero con la unidad correcta. Se define como 1 si hay mas de una especie con conteo positivo dentro del mismo criadero.
+
+```{r}
+vars_especies <- c(
+  "aedes_aegypti", "aedes_albopictus", "aedes_vitatus",
+  "anopheles_culicifacies", "anopheles_sinensis", "anopheles_stephensi",
+  "anopheles_vagus", "anopheles_varuna",
+  "culex_bitaeniorhynchus", "culex_gelidus", "culex_mimeticus",
+  "culex_quinquefasciatus", "culex_tritaeniorhynchus",
+  "tripteroides_affinis", "tripteroides_aranoides",
+  "armigeres_subalbatus"
+)
+
+# Las especies no-Aedes no se habian agregado en datos_criadero porque el AE
+# principal se focaliza en Aedes. Para calcular coocurrencia, armamos una tabla
+# especifica desde datos.
+coocurrencia_criadero <- datos %>%
+  group_by(across(all_of(id_criadero))) %>%
+  summarise(
+    across(all_of(vars_especies), ~ sum(.x, na.rm = TRUE)),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    riqueza_especies = rowSums(across(all_of(vars_especies), ~ .x > 0)),
+    coocurrencia = if_else(riqueza_especies > 1, 1, 0)
+  )
+
+coocurrencia_criadero %>%
+  count(coocurrencia) %>%
+  mutate(porcentaje = 100 * n / sum(n))
+```
+
+## Independencia y estructura del muestreo
+
+Las observaciones no deberian tratarse como completamente independientes. Hay varias mediciones dentro de una misma grilla, las grillas se visitaron a lo largo de estaciones y hay ubicaciones cercanas entre si. En una etapa posterior, esto sugiere considerar efectos aleatorios o estructuras de dependencia por grilla, fecha/estacion o ubicacion.
+
+## Cierre
+
+El AE corregido muestra que la base requiere trabajar cuidadosamente la unidad de analisis. `Sl.no` no identifica criaderos individuales, por lo que se usa una clave compuesta de estacion, grilla, fecha, coordenadas y contenedor. El analisis confirma muchos ceros, sobredispersion fuerte en los conteos y posibles diferencias por estacion, macrohabitat y microhabitat. Para presencia/ausencia se justifican modelos binomiales; para abundancia se justifican modelos de conteo con sobredispersion, especialmente binomial negativo, y eventualmente modelos hurdle o inflados en cero si se decide separar los procesos de cero.

@@ -1,0 +1,4 @@
+"respuesta","modelo","aic"
+"aedes_aegypti","zinb",1405.68755672703
+"aedes_albopictus","zinb",848.422266789527
+"total_mosquito_emerged","zinb",2111.96902882228

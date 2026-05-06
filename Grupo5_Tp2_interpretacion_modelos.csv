@@ -1,0 +1,5 @@
+"modelo","que_evalua","lectura_en_este_analisis"
+"Poisson","Modelo base para conteos; supone media similar a varianza.","Queda como comparacion, pero no como candidato principal: hay sobredispersion fuerte y AIC muy alto."
+"Binomial negativo","Modelo para conteos con sobredispersion.","Mejora mucho respecto de Poisson; es una alternativa solida porque permite varianza mayor que la media."
+"ZIP","Modelo Poisson con componente adicional para ceros extra.","Mejora respecto de Poisson, pero queda peor que NB y ZINB porque no resuelve bien la sobredispersion."
+"ZINB","Modelo binomial negativo con componente adicional para ceros extra.","Tiene el menor AIC en las tres respuestas; es el candidato mas completo para una etapa posterior, aunque no se lo toma como modelo final cerrado."

@@ -1,0 +1,37 @@
+"season","microhabitat","n_criaderos","ae_aegypti_total","ae_albopictus_total","ae_aegypti_media","ae_albopictus_media"
+"april-june","Storage containers",165,69,1,0.418181818181818,0.00606060606060606
+"april-june","Pots",335,61,5,0.182089552238806,0.0149253731343284
+"april-june","Discarded containers",2147,29,28,0.0135072193758733,0.0130414531904984
+"april-june","Grinding stones",41,8,15,0.195121951219512,0.365853658536585
+"april-june","Tree holes",25,0,4,0,0.16
+"april-june","Discarded tires",44,2,0,0.0454545454545455,0
+"april-june","Coconut Shells",429,0,0,0,0
+"april-june","Plant axils",25,0,0,0,0
+"april-june","Stagnant water",24,0,0,0,0
+"feb-march","Storage containers",76,98,5,1.28947368421053,0.0657894736842105
+"feb-march","Discarded containers",890,63,30,0.0707865168539326,0.0337078651685393
+"feb-march","Grinding stones",28,29,4,1.03571428571429,0.142857142857143
+"feb-march","Discarded tires",59,13,0,0.220338983050847,0
+"feb-march","Pots",116,1,0,0.00862068965517241,0
+"feb-march","Coconut Shells",240,0,0,0,0
+"feb-march","Plant axils",24,0,0,0,0
+"feb-march","Stagnant water",17,0,0,0,0
+"feb-march","Tree holes",6,0,0,0,0
+"july-september","Discarded containers",1706,45,151,0.0263774912075029,0.0885111371629543
+"july-september","Grinding stones",50,79,25,1.58,0.5
+"july-september","Pots",300,49,33,0.163333333333333,0.11
+"july-september","Storage containers",83,43,9,0.518072289156627,0.108433734939759
+"july-september","Coconut Shells",370,15,28,0.0405405405405405,0.0756756756756757
+"july-september","Discarded tires",51,37,5,0.725490196078431,0.0980392156862745
+"july-september","Plant axils",20,0,4,0,0.2
+"july-september","Tree holes",12,0,4,0,0.333333333333333
+"july-september","Stagnant water",30,0,1,0,0.0333333333333333
+"october-december","Discarded containers",808,11,13,0.0136138613861386,0.0160891089108911
+"october-december","Storage containers",40,20,0,0.5,0
+"october-december","Grinding stones",53,17,0,0.320754716981132,0
+"october-december","Pots",317,16,0,0.0504731861198738,0
+"october-december","Stagnant water",8,2,2,0.25,0.25
+"october-december","Coconut Shells",133,0,0,0,0
+"october-december","Discarded tires",30,0,0,0,0
+"october-december","Plant axils",14,0,0,0,0
+"october-december","Tree holes",4,0,0,0,0

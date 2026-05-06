@@ -1,0 +1,13 @@
+"respuesta","modelo","aic"
+"aedes_aegypti","zinb",1405.68755672703
+"aedes_aegypti","nb",1422.38904133942
+"aedes_aegypti","zip",1721.10379876883
+"aedes_aegypti","poisson",4263.34938589807
+"aedes_albopictus","zinb",848.422266789527
+"aedes_albopictus","nb",853.788834031778
+"aedes_albopictus","zip",962.192020198554
+"aedes_albopictus","poisson",2627.38834333998
+"total_mosquito_emerged","zinb",2111.96902882228
+"total_mosquito_emerged","nb",2197.26564763858
+"total_mosquito_emerged","zip",2498.46126981099
+"total_mosquito_emerged","poisson",6386.67957373891

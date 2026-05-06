@@ -1,0 +1,5 @@
+"variable","n","cantidad_ceros","proporcion_ceros","media","mediana","varianza","minimo","maximo","indice_varianza_media","comentario"
+"total_mosquito_emerged",8720,8533,0.97855504587156,0.147935779816514,0,1.87259580732156,0,42,12.658167007631,"Hay indicios de sobredispersion respecto de Poisson."
+"aedes_total",8720,8568,0.98256880733945,0.123394495412844,0,1.6893253266356,0,42,13.6904431675301,"Hay indicios de sobredispersion respecto de Poisson."
+"aedes_aegypti",8720,8604,0.986697247706422,0.0810779816513761,0,1.07416881144311,0,42,13.2485884523111,"Hay indicios de sobredispersion respecto de Poisson."
+"aedes_albopictus",8720,8657,0.992775229357798,0.0420871559633028,0,0.476379632269924,0,30,11.318883905705,"Hay indicios de sobredispersion respecto de Poisson."

@@ -1,5 +1,4 @@
 library(DHARMa)
-
 set.seed(123)
 
 # Partimos del modelo
@@ -8,7 +7,6 @@ y <- 2 + 3*x + rnorm(100, sd = 1)
 
 datos <- data.frame(x, y)
 
-x11()
 plot(x=datos$x, y=datos$y)
 
 modelo <- lm(y ~ x, data = datos)
@@ -28,7 +26,6 @@ sigma_modelo
 
 datos$residuo_std <- rstandard(modelo)
 
-x11()
 plot(datos$y_pred, datos$residuo_std,
      xlab = "Valores predichos",
      ylab = "Residuo estandar")
@@ -59,7 +56,6 @@ for(i in 1:n){
 
 # Graficos de la simulacion
 
-x11()
 hist(datos$residuo_dharma_manual,
      breaks = 10,
      main = "Histograma de residuos DHARMa manual",
@@ -69,7 +65,6 @@ hist(datos$residuo_dharma_manual,
 # Si el modelo está bien:
 # el histograma debería verse más o menos plano
 
-x11()
 res_ordenados <- sort(datos$residuo_dharma_manual)
 cuantiles_uniformes <- ppoints(length(res_ordenados))
 plot(cuantiles_uniformes, res_ordenados,
@@ -81,7 +76,7 @@ abline(0, 1, lty = 2)
 # Si el modelo está bien:
 # los puntos deberían seguir la diagonal
 
-x11()
+
 plot(datos$y_pred, datos$residuo_dharma_manual,
      xlab = "Valores predichos",
      ylab = "Residuo DHARMa manual",
@@ -95,7 +90,7 @@ abline(h = c(0.025, 0.975), lty = 3)
 # sin patrón claro,
 # centrada aproximadamente en 0.5
 
-x11()
+
 plot(datos$y_pred, datos$residuo_dharma_manual,
      xlab = "Valores predichos",
      ylab = "Residuo DHARMa manual",

@@ -1,0 +1,310 @@
+---
+title: "TP2 Bioestadística - Modelado de abundancia"
+author: "Ariel"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+    code-tools: true
+    theme: cosmo
+execute:
+  warning: false
+  message: false
+  echo: true
+editor: visual
+---
+
+# Introducción
+
+En esta etapa se modela la **abundancia** de mosquitos Aedes. A diferencia del modelo de presencia, donde la variable respuesta era binaria, aquí trabajamos con variables de conteo.
+
+El análisis exploratorio mostró dos características importantes:
+
+-   una alta proporción de ceros;
+-   sobredispersión, es decir, una varianza mucho mayor que la media.
+
+Por ese motivo se evaluaron modelos de conteo, principalmente **binomial negativa (NB)** y **binomial negativa inflada en ceros (ZINB)**.
+
+# Carga de librerías y base de datos
+
+```{r}
+library(readxl)
+library(dplyr)
+library(lme4)
+library(glmmTMB)
+library(DHARMa)
+```
+
+```{r}
+# Ajustar esta ruta al directorio de trabajo donde se encuentra el repositorio
+# setwd("/home/ariel/Repos/bioestadistica-aedes")
+
+# Cargar base
+datos <- suppressWarnings(
+  read_excel("aedes_data.xlsx")
+)
+
+dim(datos)
+```
+
+# Preparación de datos
+
+Se decidió excluir del análisis aquellas observaciones con volumen de agua igual a cero, ya que en esos casos la presencia de larvas es imposible. Esos casos corresponden a ceros estructurales evidentes.
+
+Además, variables como temperatura y pH no representan mediciones reales en ausencia de agua, sino valores nulos que podrían inducir interpretaciones erróneas en el modelo.
+
+```{r}
+datos_mod <- datos %>%
+  filter(
+    Grid_type == "Index",
+    `log volume` > 0
+  ) %>%
+  select(
+    Prevalence,
+    `Total mosquito emerged`,
+    `Aedes aegypti`,
+    `Aedes albopictus`,
+    Season,
+    Temperature,
+    pH,
+    `log volume`,
+    Macrohabitat,
+    Microhabitat,
+    Grid_no
+  ) %>%
+  mutate(
+    Season = as.factor(Season),
+    Macrohabitat = as.factor(Macrohabitat),
+    Microhabitat = as.factor(Microhabitat),
+    Grid_no = as.factor(Grid_no)
+  )
+
+dim(datos_mod)
+```
+
+Se estandarizaron las variables continuas para que los coeficientes sean más comparables y para mejorar la estabilidad numérica de los modelos.
+
+```{r}
+datos_mod <- datos_mod %>%
+  mutate(
+    temp_std = as.numeric(scale(Temperature)),
+    pH_std = as.numeric(scale(pH)),
+    logvol_std = as.numeric(scale(`log volume`))
+  )
+
+dim(datos_mod)
+```
+
+# Evaluación de ceros y sobredispersión
+
+Aunque se eliminaron los criaderos sin agua, la abundancia sigue presentando muchos ceros. Estos ceros pueden deberse a ausencia biológica de larvas o a condiciones no observadas que impiden la presencia larval incluso cuando hay agua.
+
+```{r}
+table(datos_mod$`Total mosquito emerged` == 0)
+prop.table(table(datos_mod$`Total mosquito emerged` == 0))
+```
+
+```{r}
+media <- mean(datos_mod$`Total mosquito emerged`)
+varianza <- var(datos_mod$`Total mosquito emerged`)
+
+indice_dispersion <- varianza / media
+indice_dispersion
+```
+
+La proporción de ceros es alta y el índice de dispersión es mayor que 1, lo que indica sobredispersión. Por este motivo, se descarta un modelo Poisson simple y se evalúan modelos de binomial negativa.
+
+# Modelo de abundancia total
+
+## Modelos candidatos
+
+Se comparó un modelo de binomial negativa con un modelo de binomial negativa inflado en ceros.
+
+```{r}
+modelo_nb <- glmmTMB(
+  `Total mosquito emerged` ~ Season + Microhabitat + temp_std + logvol_std + (1 | Grid_no),
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_zinb <- glmmTMB(
+  `Total mosquito emerged` ~ Season + Microhabitat + temp_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+```
+
+## Comparación de modelos
+
+```{r}
+AIC(modelo_nb, modelo_zinb)
+```
+
+La diferencia de AIC es considerable. El modelo ZINB presenta mejor ajuste que el modelo NB, lo que sugiere que el componente de inflación de ceros permite representar mejor la estructura de la abundancia total.
+
+## Diagnóstico DHARMa
+
+```{r}
+res_zinb <- simulateResiduals(modelo_zinb)
+plot(res_zinb)
+```
+
+En el gráfico QQ, los residuos simulados se alinean adecuadamente con la línea esperada, lo que sugiere que la distribución asumida por el modelo es consistente con la estructura de los datos.
+
+Los tests estadísticos asociados no resultan significativos:
+
+-   Uniformidad de residuos: no se detectan desviaciones importantes.
+-   Dispersión: no se observan problemas relevantes de sobredispersión o subdispersión residual.
+-   Outliers: la cantidad de valores extremos es razonable bajo el modelo.
+
+El gráfico de residuos versus valores predichos no muestra patrones sistemáticos relevantes. En conjunto, los diagnósticos sugieren que el modelo ZINB presenta un ajuste adecuado.
+
+## Summary del modelo final
+
+```{r}
+summary(modelo_zinb)
+```
+
+## Interpretación
+
+El modelo ZINB tiene dos componentes. El modelo condicional explica la abundancia esperada de larvas. El modelo de inflación de ceros explica la probabilidad de ceros extra.
+
+La varianza asociada a `Grid_no` es prácticamente nula, lo que sugiere que, una vez consideradas las variables incluidas en el modelo, no queda una variabilidad importante entre grillas.
+
+En el modelo condicional, `feb-march` presenta un efecto positivo y significativo. Esto indica que en esa estación la abundancia esperada es mayor respecto a la estación de referencia.
+
+La temperatura presenta un efecto negativo significativo. Esto indica que, a medida que aumenta la temperatura, la abundancia esperada de larvas tiende a disminuir, manteniendo constantes las demás variables.
+
+El volumen no muestra un efecto claro sobre la abundancia total en este modelo.
+
+En el componente de inflación de ceros, `october-december` presenta un efecto positivo y significativo. Esto indica que en esa estación aumentan las odds de obtener ceros extra, lo que sugiere condiciones menos favorables para la presencia de larvas.
+
+# Modelo de abundancia para *Aedes aegypti*
+
+## Modelos candidatos
+
+```{r}
+modelo_aegypti_nb <- glmmTMB(
+  `Aedes aegypti` ~ Season + Microhabitat + temp_std + logvol_std + (1 | Season),
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_aegypti_zinb <- glmmTMB(
+  `Aedes aegypti` ~ Season + Microhabitat + temp_std + logvol_std + (1 | Season),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+```
+
+## Comparación de modelos
+
+```{r}
+AIC(modelo_aegypti_nb, modelo_aegypti_zinb)
+```
+
+La comparación entre NB y ZINB para *Aedes aegypti* muestra una diferencia de AIC pequeña. En este contexto se selecciona el modelo NB por parsimonia, evitando incluir un componente de inflación de ceros innecesario.
+
+## Diagnóstico DHARMa
+
+```{r}
+res_aegypti_nb <- simulateResiduals(modelo_aegypti_nb)
+plot(res_aegypti_nb)
+```
+
+En el gráfico QQ, los residuos simulados siguen adecuadamente la línea esperada. Los tests de uniformidad, dispersión y outliers no resultan significativos, por lo que no se detectan problemas importantes en los residuos.
+
+El gráfico de residuos versus valores predichos no muestra patrones sistemáticos fuertes. Se observan algunos residuos altos aislados, pero no generan una desviación importante del ajuste general.
+
+## Summary del modelo final
+
+```{r}
+summary(modelo_aegypti_nb)
+```
+
+## Interpretación
+
+La varianza asociada al efecto aleatorio de `Season` es prácticamente nula. Esto indica que, una vez consideradas las variables del modelo, no queda una variabilidad importante entre estaciones a nivel aleatorio.
+
+El intercepto indica una abundancia esperada baja en la condición de referencia.
+
+`feb-march` muestra una tendencia positiva marginal, lo que sugiere una posible mayor abundancia respecto a la estación de referencia, aunque la evidencia no es concluyente.
+
+`october-december` presenta un efecto negativo significativo. Esto indica que la abundancia esperada de *Aedes aegypti* es menor en esa estación respecto a la estación de referencia.
+
+Dentro de los microhábitats, `Grinding stones` presenta un efecto positivo significativo. Esto indica una abundancia esperada considerablemente mayor en ese microhábitat respecto a la categoría de referencia.
+
+La temperatura presenta un efecto negativo significativo: a mayor temperatura, menor abundancia esperada de *Aedes aegypti*. El volumen no muestra un efecto claro.
+
+# Modelo de abundancia para *Aedes albopictus*
+
+## Modelos candidatos
+
+```{r}
+modelo_albopictus_nb <- glmmTMB(
+  `Aedes albopictus` ~ Microhabitat + temp_std + logvol_std + (1 | Season),
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_albopictus_zinb <- glmmTMB(
+  `Aedes albopictus` ~ Macrohabitat + temp_std + logvol_std + (1 | Season),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+```
+
+## Comparación de modelos
+
+```{r}
+AIC(modelo_albopictus_nb, modelo_albopictus_zinb)
+```
+
+La comparación muestra una diferencia de AIC considerable a favor del modelo ZINB. Esto sugiere que, para *Aedes albopictus*, existe evidencia de un proceso adicional de generación de ceros, por lo que se selecciona el modelo ZINB.
+
+## Diagnóstico DHARMa
+
+```{r}
+res_albopictus_zinb <- simulateResiduals(modelo_albopictus_zinb)
+plot(res_albopictus_zinb)
+```
+
+En el gráfico QQ, los residuos simulados siguen adecuadamente la línea esperada. Los tests de uniformidad, dispersión y outliers no resultan significativos.
+
+En el gráfico de residuos versus valores predichos no se observan patrones sistemáticos fuertes. Las curvas de cuantiles se mantienen relativamente horizontales y dentro de las bandas de confianza. En conjunto, el modelo ZINB presenta un ajuste adecuado.
+
+## Summary del modelo final
+
+```{r}
+summary(modelo_albopictus_zinb)
+```
+
+## Interpretación
+
+El modelo ZINB para *Aedes albopictus* también tiene dos componentes: abundancia e inflación de ceros.
+
+La varianza asociada al efecto aleatorio de `Season` es prácticamente nula. Esto indica que, una vez consideradas las variables del modelo, no queda una variabilidad importante entre estaciones a nivel aleatorio.
+
+En el modelo condicional, `MacrohabitatHigh dense` presenta un efecto negativo significativo. Esto indica que la abundancia esperada de *Aedes albopictus* es menor en zonas de alta densidad respecto al macrohábitat de referencia.
+
+La temperatura muestra una tendencia positiva marginal. Esto sugiere que la abundancia esperada podría aumentar con la temperatura, aunque la evidencia no es concluyente.
+
+El volumen no muestra un efecto claro sobre la abundancia de *Aedes albopictus*.
+
+En el componente de inflación de ceros, `july-september` presenta un efecto negativo significativo. Esto indica una reducción importante de las odds de obtener ceros extra en esa estación. En otras palabras, durante `july-september` disminuye la probabilidad de ausencia estructural, lo que sugiere condiciones más favorables para la presencia de *Aedes albopictus*.
+
+# Conclusión general
+
+El modelado de abundancia confirma que los datos presentan características propias de conteos ecológicos: muchos ceros, sobredispersión y estructura agrupada.
+
+Para la abundancia total, el modelo ZINB fue más adecuado que el modelo NB, indicando que el exceso de ceros debía ser modelado explícitamente.
+
+Para *Aedes aegypti*, el modelo NB fue suficiente y más parsimonioso. En esta especie se observó una menor abundancia en `october-december`, mayor abundancia en `Grinding stones` y un efecto negativo de la temperatura.
+
+Para *Aedes albopictus*, el modelo ZINB fue más adecuado. La abundancia fue menor en zonas `High dense`, y `july-september` redujo fuertemente la probabilidad de ceros extra.
+
+En conjunto, los resultados sugieren que las especies no responden exactamente igual a las mismas variables. Por eso, además de modelar la abundancia total, resulta útil analizar cada especie por separado.

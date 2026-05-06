@@ -1,4 +1,5 @@
 Tutorial: Entendiendo DHARMa desde cero
+
 0. Idea general
 
 Este tutorial compara dos enfoques para analizar residuos:
@@ -10,6 +11,7 @@ residuo = observado - predicho
 Método DHARMa
 
 residuo = qué tan probable es el valor observado según el modelo
+
 1. Generación de datos
 set.seed(123)
 

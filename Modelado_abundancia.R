@@ -9,9 +9,12 @@ library(lme4)
 library(glmmTMB)
 library(DHARMa)
 
+# Ajustar esta ruta al directorio de trabajo donde se encuentra el repositorio
+setwd("/home/ariel/Repos/bioestadistica-aedes")
+
 # Cargar base
 datos <- suppressWarnings(
-  read.csv("/home/ariel/Repos/bioestadistica-aedes/datos_criadero.csv")
+  datos <- read_excel("aedes_data.xlsx")
 )
 dim(datos)
 str(datos)
@@ -29,28 +32,25 @@ str(datos)
 # erróneas en el modelo.
 
 
-
-
 datos_mod <- datos %>%
   # filtramos grillas index y criaderos activos
   filter(
     Grid_type == "Index",
-    `log.volume` > 0
+    `log volume` > 0
   ) %>%
   # seleccionamos variables
   select(
     Prevalence,
-    `Total.mosquito.emerged`,
-    `Aedes.aegypti`,
-    `Aedes.albopictus`,
+    `Total mosquito emerged`,
+    `Aedes aegypti`,
+    `Aedes albopictus`,
     Season,
     Temperature,
     pH,
-    `log.volume`,
+    `log volume`,
     Macrohabitat,
     Microhabitat,
-    Grid_no,
-    coocurrencia
+    Grid_no
   ) %>%
   # Convertimos variables categóricas
   mutate(
@@ -60,6 +60,7 @@ datos_mod <- datos %>%
     Grid_no = as.factor(Grid_no)
   )
 
+dim(datos_mod)
 
 # Estandarizamos variables predictoras continuos
 
@@ -67,7 +68,7 @@ datos_mod <- datos_mod %>%
   mutate(
     temp_std = as.numeric(scale(Temperature)),
     pH_std = as.numeric(scale(pH)),
-    logvol_std = as.numeric(scale(`log.volume`))
+    logvol_std = as.numeric(scale(`log volume`))
   )
 
 # Inspección rápida
@@ -79,13 +80,14 @@ str(datos_mod)
 colSums(is.na(datos_mod))
 
 
+# =================================================
+# Paso 1: Evaluacion de ceros
+# =================================================
 
-# Paso 1: Detectar y clasificar los ceros
+# Ceros falsos: Se supone que existen ceros falsos pero no son evidentes
+# entonces no podemos eliminarlos.
 
-# Se supone que existen ceros falsos pero no son evidentes
-# entonces no podemos eliminar ceros falsos
-
-# Eliminamos ceros estructurales evidentes con
+# Ceros estructurales: eliminamos ceros estructurales evidentes con
 # la condición de volumen de agua = 0
 
 # Aunque filtramos estos ceros estructurales
@@ -97,7 +99,9 @@ colSums(is.na(datos_mod))
 # pH extremo, etc
 # como conclusion, parte de los ceros podrian ser estructurales
 
-# Paso 2: identificar covariables adecuadas
+# =====================================================
+# Paso 2: Identificar covariables adecuadas
+# =====================================================
 
 # Para modelar abundancia, las covariables seleccionadas son:
   
@@ -112,34 +116,40 @@ colSums(is.na(datos_mod))
 # Variable respuesta:
 # `Total mosquito emerged`
 
+# ====================================================
 # Paso 3: evaluar sobredispersion e inflacion de ceros
+# ====================================================
 
-table(datos_mod$`Total.mosquito.emerged` == 0)
-prop.table(table(datos_mod$`Total.mosquito.emerged` == 0))
+table(datos_mod$`Total mosquito emerged` == 0)
+prop.table(table(datos_mod$`Total mosquito emerged` == 0))
 
-# 71% de ceros a pesar de excluir recipientes sin agua
+# 83% de ceros a pesar de excluir recipientes sin agua
 
-media <- mean(datos_mod$`Total.mosquito.emerged`)
-varianza <- var(datos_mod$`Total.mosquito.emerged`)
+media <- mean(datos_mod$`Total mosquito emerged`)
+varianza <- var(datos_mod$`Total mosquito emerged`)
 
 indice_dispersion <- varianza / media
 indice_dispersion
 
-# Indice de dispersion 13.5 (>>1)
+# Indice de dispersion 11.8 (>>1)
 # Existe sobredispersion
 
+#====================================
 # Paso 4: elegir modelos adecuados
+#====================================
+
 
 # A pesar de excluir los criaderos sin agua, la variable de abundancia presenta
-# una elevada proporción de ceros (71%) y una fuerte sobredispersión (d = 13.5).
+# una elevada proporción de ceros (83%) y una fuerte sobredispersión (d = 11.8).
 
-# Si bien estos ceros pueden explicarse en parte por la variabilidad del proceso,
-# no puede descartarse la existencia de condiciones no observadas que limiten
-# estructuralmente la presencia de larvas, incluso en criaderos con agua.
+# Si bien estos ceros pueden explicarse en parte por la variabilidad del
+# proceso, no puede descartarse la existencia de condiciones no observadas que
+# limiten estructuralmente la presencia de larvas, incluso en criaderos con
+# agua.
 
-# En este contexto, se consideró apropiado evaluar modelos inflados en cero,
-# los cuales permiten modelar simultáneamente la ocurrencia de ceros estructurales
-# y la abundancia cuando el proceso está activo.
+# En este contexto, se consideró apropiado evaluar modelos inflados en cero, los
+# cuales permiten modelar simultáneamente la ocurrencia de ceros estructurales y
+# la abundancia cuando el proceso está activo.
 
 # Por lo tanto, se compararon modelos de binomial negativa (NB) y 
 # binomial negativa inflada en ceros (ZINB), con el objetivo de determinar 
@@ -149,17 +159,23 @@ indice_dispersion
 # Modelo NB
 
 modelo_nb <- glmmTMB(
-  `Total.mosquito.emerged` ~  Season + Macrohabitat + (1 | Grid_no),
+  `Total mosquito emerged` ~  Season + Microhabitat + temp_std + logvol_std + (1 | Grid_no),
   family = nbinom2,
   data = datos_mod
 )
 
 # Modelo ZINB
+# Season
+# Macrohabitat
+# Microhabitat
+# Temperature
+# pH
+# log volume
 
 modelo_zinb <- glmmTMB(
-  `Total.mosquito.emerged` ~  Season + Macrohabitat + (1 | Grid_no),
+  `Total mosquito emerged` ~  Season  + Microhabitat + temp_std + logvol_std + (1 | Grid_no),
   
-  ziformula = ~ Season,
+  ziformula = ~  Season,
   family = nbinom2,
   data = datos_mod
 )
@@ -168,7 +184,7 @@ modelo_zinb <- glmmTMB(
 
 AIC(modelo_nb, modelo_zinb)
 
-# La diferencia de AIC (45) es considerablemente mayor a 10, lo que indica una
+# La diferencia de AIC (29) es considerablemente mayor a 10, lo que indica una
 # mejora sustancial en el ajuste del modelo ZINB respecto al modelo NB.
 
 # Este resultado sugiere que la inclusión de un componente de inflación de ceros
@@ -189,17 +205,20 @@ plot(res_zinb)
 
 # Gráfico diagnóstico DHARMa
 
-# En el gráfico QQ, los residures_zinb <- simulateResiduals(modelo_zinb)
-
-x11()
-plot(res_zinb)os simulados se alinean adecuadamente con la línea
+# En el gráfico QQ, los residuos simulados se alinean adecuadamente con la línea
 # esperada, lo que sugiere que la distribución asumida por el modelo es
 # consistente con la estructura de los datos.
 
 # Los tests estadísticos asociados no resultan significativos
-# KS test p = 0.38; test de dispersión p = 0.84; test de outliers p = 0.24,
-# indicando ausencia de desviaciones importantes, sobredispersión residual
-# o valores atípicos no explicados.
+
+# Uniformidad de residuos (KS test p = 0.74):
+# p > 0.05 No se detectan problemas importantes
+
+# Test de dispersión (p = 0.72):
+# p > 0.05 La dispersion parece adecuada
+
+# Test de outliers (p = 0.38):
+# p > 0.05 Cantidad de outliers razonable
 
 # Por otro lado, el gráfico de residuos versus valores predichos no muestra
 # patrones sistemáticos relevantes. Las curvas de cuantiles se mantienen
@@ -217,95 +236,150 @@ summary(modelo_zinb)
 
 # El modelo ZINB tiene dos componentes:
 # 1) El modelo condicional, que explica la abundancia de larvas.
-# 2) El modelo de inflación de ceros, que explica la probabilidad de ceros extra.
+
+# 2) El modelo de inflación de ceros, que explica la
+# probabilidad de ceros extra en los datos.
 
 # --------------------------
 # Efecto aleatorio
 # --------------------------
 
-# La varianza asociada a Grid_no es prácticamente nula.
-# Esto sugiere que, una vez consideradas Season y Macrohabitat,
-# no queda una variabilidad relevante entre grillas.
+# La varianza asociada a Grid_no es prácticamente nula
+# (Std.Dev ≈ 0.0001).
+
+# Esto sugiere que, una vez consideradas las variables incluidas en el modelo,
+# no queda una variabilidad importante entre grillas.
 
 # --------------------------
 # Modelo condicional: abundancia
 # --------------------------
 
 # El intercepto representa la abundancia esperada en escala logarítmica
-# para la categoría de referencia de Season y Macrohabitat.
+# para la categoría de referencia de Season y Microhabitat,
+# con temperatura y volumen en su valor promedio.
 
-# Seasonfeb-march tiene un efecto positivo y significativo
-# (Estimate = 1.03; p < 0.001).
-# Esto indica que en feb-march la abundancia esperada de larvas es mayor
+# Intercepto: 0.94 (p = 0.015)
+
+# exp(0.94) = 2.56
+
+# Esto indica que, en la condición de referencia,
+# la abundancia esperada es aproximadamente 2.6 larvas.
+
+# --------------------------
+# Season
+# --------------------------
+
+# Seasonfeb-march: 1.08 (p < 0.001)
+
+# Presenta un efecto positivo y significativo.
+# Esto indica que en feb-march la abundancia esperada de larvas
+# es mayor respecto a la estación de referencia.
+
+# exp(1.08) ≈ 2.97
+
+# La abundancia esperada es aproximadamente 3 veces mayor
 # que en la estación de referencia.
 
-# exp(1.03) ≈ 2.8
-# Por lo tanto, la abundancia esperada en feb-march es aproximadamente
-# 2.8 veces mayor que en la estación de referencia.
+# Seasonjuly-september: 0.18 (p = 0.49)
 
-# Seasonjuly-september muestra un efecto positivo marginal
-# (Estimate = 0.43; p ≈ 0.076).
-# Esto sugiere una posible tendencia a mayor abundancia,
+# No se detectan diferencias significativas respecto a la estación de referencia.
+
+# Seasonoctober-december: -0.22 (p = 0.56)
+
+# Tampoco se observan diferencias significativas respecto
+# a la estación de referencia.
+
+# --------------------------
+# Microhabitat
+# --------------------------
+
+# Ninguna categoría de Microhabitat presenta efectos
+# claramente significativos al nivel 0.05.
+
+# Grinding stones muestra una tendencia positiva marginal
+# (Estimate = 0.68  p = 0.063).
+
+# exp(0.68) ≈ 1.97
+
+# Esto podría indicar una abundancia aproximadamente
+# 2 veces mayor respecto al microhábitat de referencia,
 # aunque la evidencia no es concluyente.
 
-# Seasonoctober-december no muestra un efecto significativo.
-# No se detectan diferencias claras respecto a la estación de referencia.
+# --------------------------
+# Variables continuas
+# --------------------------
 
-# En relación con Macrohabitat, la categoría Lake presenta un efecto
-# negativo significativo (Estimate = -0.99; p ≈ 0.016).
-# Esto indica menor abundancia esperada de larvas respecto al macrohábitat
-# de referencia.
+# temp_std: -0.37 (p = 0.003)
 
-# exp(-0.99) ≈ 0.37
-# Esto equivale a una abundancia esperada aproximadamente 63% menor.
+# La temperatura presenta un efecto negativo significativo.
 
-# La categoría Medium dense también presenta un efecto negativo significativo
-# (Estimate = -0.88; p ≈ 0.024), indicando menor abundancia esperada
-# respecto al macrohábitat de referencia.
+# Esto indica que, a medida que aumenta la temperatura,
+# la abundancia esperada de larvas tiende a disminuir,
+# manteniendo constantes las demás variables.
 
-# Las categorías High dense, Low dense y Plantation no presentan efectos
-# significativos claros.
+# exp(-0.37) = 0.68
+
+# La abundancia esperada disminuye aproximadamente un 32%
+# por cada aumento de una desviación estándar en temperatura.
+
+# logvol_std: -0.14 (p = 0.35)
+
+# No se detecta un efecto significativo del volumen sobre la abundancia.
 
 # --------------------------
 # Modelo de inflación de ceros
 # --------------------------
 
-# En el componente de inflación de ceros, ninguna categoría de Season
-# resulta significativa al nivel convencional de 0.05.
+# Este componente modela la probabilidad de generar ceros extra,
+# es decir, observaciones donde no aparecen larvas.
 
-# Sin embargo, october-december muestra una tendencia marginal
-# (Estimate = 0.64; p ≈ 0.063), lo que podría indicar una mayor
-# probabilidad de ceros en esa estación.
+# Intercepto: 1.03 (p < 0.001)
 
-# Esta tendencia debe interpretarse con cautela, ya que no alcanza
-# significancia estadística convencional.
+# Indica una probabilidad importante de ceros extra
+# en la condición de referencia.
+
+# Seasonfeb-march: 0.44 (p = 0.16)
+
+# No muestra diferencias significativas respecto a la estación de referencia.
+
+# Seasonjuly-september: -0.47 (p ≈ 0.085)
+
+# Presenta una tendencia a menor probabilidad de ceros extra,
+# aunque la evidencia no es concluyente.
+
+# Seasonoctober-december: 1.54 (p < 0.001)
+
+# Presenta un efecto positivo y significativo sobre la inflación de ceros.
+
+# exp(1.54) ≈ 4.67
+
+# Esto indica que las odds de obtener ceros extra son aproximadamente
+# 4.7 veces mayores respecto a la estación de referencia.
 
 # ==========================
 # Conclusión final
 # ==========================
 
-# El modelo ZINB fue seleccionado como modelo final porque presentó un mejor
-# ajuste que el modelo NB según el criterio AIC y mostró diagnósticos adecuados
-# mediante DHARMa.
+# El modelo ZINB fue seleccionado porque permitió modelar simultáneamente:
+# - la abundancia de larvas
+# - y el exceso de ceros observado en los datos.
 
-# Los diagnósticos no evidenciaron problemas importantes de distribución de
-# residuos, sobredispersión residual, valores atípicos ni exceso de ceros no
-# explicado.
+# Los resultados sugieren que la abundancia está asociada
+# principalmente a la estación y a la temperatura.
 
-# La abundancia de larvas estuvo principalmente asociada a la estacionalidad
-# y al macrohábitat.
+# En particular, feb-march presenta una abundancia esperada
+# considerablemente mayor, mientras que temperaturas más altas
+# se asocian a menor abundancia.
 
-# En particular, feb-march presentó mayor abundancia esperada de larvas,
-# mientras que los macrohábitats Lake y Medium dense mostraron menor abundancia
-# respecto a la categoría de referencia.
+# Además, october-december presenta una mayor probabilidad
+# de ceros extra, lo que sugiere condiciones menos favorables
+# para la presencia de larvas en esa estación.
 
-# El componente de inflación de ceros permitió capturar adecuadamente la
-# proporción de ceros observada en los datos, aunque las variables incluidas
-# en este componente no mostraron efectos significativos fuertes.
+# En conjunto, el modelo indica que la dinámica de abundancia
+# depende tanto de factores ambientales como de procesos
+# asociados al exceso de ceros en los datos.
 
-# En conjunto, el modelo sugiere que la dinámica de abundancia larval está
-# estructurada principalmente por factores temporales y por el contexto ambiental
-# general del criadero.
+
 
 
 # ==========================
@@ -313,13 +387,13 @@ summary(modelo_zinb)
 # ==========================
 
 modelo_aegypti_nb <- glmmTMB(
-  Aedes.aegypti ~ Season + Macrohabitat,
+  `Aedes aegypti` ~ Season + Microhabitat + temp_std + logvol_std + (1 | Season),
   family = nbinom2,
   data = datos_mod
 )
 
 modelo_aegypti_zinb <- glmmTMB(
-  Aedes.aegypti ~ Season + Macrohabitat,
+  `Aedes aegypti` ~ Season + Microhabitat + temp_std + logvol_std + (1 | Season),
   ziformula = ~ Season,
   family = nbinom2,
   data = datos_mod
@@ -328,7 +402,7 @@ modelo_aegypti_zinb <- glmmTMB(
 AIC(modelo_aegypti_nb, modelo_aegypti_zinb)
 
 # La comparación entre modelos NB y ZINB para Aedes aegypti mostró una diferencia
-# de AIC menor a 2 (ΔAIC ≈ 1.5), lo que indica que ambos modelos presentan un
+# de AIC de 2 (< 10), lo que indica que ambos modelos presentan un
 # ajuste equivalente.
 
 # En este contexto, se optó por el modelo NB por su mayor parsimonia,
@@ -346,128 +420,189 @@ res_aegypti_nb <- simulateResiduals(modelo_aegypti_nb)
 x11()
 plot(res_aegypti_nb)
 
-# El diagnóstico con DHARMa muestra un buen comportamiento general del modelo.
+# ==========================
+# Diagnóstico DHARMa
+# ==========================
 
-# En el gráfico QQ, los residuos simulados se alinean adecuadamente con la línea
-# esperada, lo que indica que la distribución asumida por el modelo es consistente
-# con los datos.
+# En el gráfico QQ, los residuos simulados siguen de manera adecuada
+# la línea esperada, lo que sugiere que la distribución asumida por el
+# modelo es compatible con la estructura observada en los datos.
 
-# Los tests asociados no resultan significativos:
-# KS test p = 0.849
-# test de dispersión p = 0.392
-# test de outliers p = 0.16
+# Los tests estadísticos asociados no resultan significativos:
 
-# Esto indica que no se detectan desviaciones importantes, sobredispersión
-# residual ni valores atípicos no explicados por el modelo.
+# Uniformidad de residuos (KS test p = 0.74):
+# p > 0.05
+# No se detectan desviaciones importantes respecto a la distribución esperada.
 
-# El gráfico de residuos versus valores predichos no muestra problemas
-# significativos. Las curvas de cuantiles se mantienen aproximadamente dentro
-# de las bandas de confianza, por lo que no se observan patrones sistemáticos
-# relevantes.
+# Test de dispersión (p = 0.72):
+# p > 0.05
+# No se observan problemas importantes de sobredispersión o subdispersión.
 
-# En conjunto, estos resultados sugieren que el modelo NB describe
-# adecuadamente la abundancia de Aedes aegypti.
+# Test de outliers (p = 0.38):
+# p > 0.05
+# La cantidad de valores extremos observada es consistente con lo esperado
+# bajo el modelo.
 
-# A diferencia del modelo de abundancia total, en esta especie no se observa
-# evidencia clara de que sea necesario un componente adicional de inflación
-# de ceros.
+# En el gráfico de residuos versus valores predichos no se observan
+# patrones sistemáticos fuertes.
+
+# Las curvas de cuantiles se mantienen aproximadamente horizontales
+# y dentro de las bandas de confianza, lo que indica que el modelo
+# representa razonablemente bien la relación entre la abundancia
+# de Aedes aegypti y las variables explicativas incluidas.
+
+# Se observan algunos puntos extremos aislados en residuos altos,
+# pero no parecen generar una desviación importante del ajuste general.
+
+# En conjunto, los diagnósticos sugieren que el modelo NB presenta
+# un ajuste adecuado y no evidencia problemas importantes en los residuos.
 
 summary(modelo_aegypti_nb)
 
 # ==========================
-# Interpretación del modelo NB - Aedes aegypti
+# Interpretación del modelo NB
+# Aedes aegypti
 # ==========================
 
-# El modelo ajustado corresponde a una binomial negativa (NB) sin componente
-# de inflación de ceros, seleccionada por parsimonia dado que el modelo ZINB
-# no mejoró sustancialmente el ajuste.
-
 # --------------------------
-# Intercepto
+# Efecto aleatorio
 # --------------------------
 
-# El intercepto (0.27) representa la abundancia esperada (en escala log)
-# para la categoría de referencia de Season y Macrohabitat.
+# La varianza asociada al efecto aleatorio de Season es prácticamente nula
+# (Std.Dev ≈ 0.000004).
 
-# No resulta significativo (p = 0.79), lo que indica alta incertidumbre
-# en la estimación del valor base.
+# Esto indica que, una vez consideradas las variables incluidas en el modelo,
+# no queda una variabilidad importante entre estaciones a nivel aleatorio.
+
+# --------------------------
+# Modelo condicional: abundancia
+# --------------------------
+
+# El intercepto representa la abundancia esperada de Aedes aegypti
+# en escala logarítmica para la categoría de referencia de Season
+# y Microhabitat, con temperatura y volumen en sus valores promedio.
+
+# Intercepto: -1.70 (p = 0.036)
+
+# exp(-1.70) ≈ 0.18
+
+# Esto indica que, en la condición de referencia,
+# la abundancia esperada de Aedes aegypti es baja.
 
 # --------------------------
 # Season
 # --------------------------
 
-# Seasonfeb-march: 1.17 (p = 0.108)
-# Muestra un efecto positivo relativamente grande, lo que sugiere una mayor
-# abundancia de Aedes aegypti en esta estación respecto a la referencia.
-# Sin embargo, el efecto no es estadísticamente significativo.
+# Seasonfeb-march: 0.99 (p ≈ 0.091)
 
-# exp(1.17) ≈ 3.2
-# Esto indicaría aproximadamente 3 veces más abundancia, aunque con alta
-# incertidumbre.
+# Presenta una tendencia positiva marginal.
+# Esto sugiere una posible mayor abundancia respecto
+# a la estación de referencia, aunque la evidencia
+# no es concluyente.
 
-# Seasonjuly-september: efecto prácticamente nulo (Estimate ≈ 0, p ≈ 1)
-# No se observan diferencias respecto a la categoría de referencia.
+# exp(0.99) ≈ 2.69
 
-# Seasonoctober-december: efecto pequeño y no significativo (p = 0.90)
-# Tampoco se detectan diferencias claras.
+# La abundancia esperada sería aproximadamente
+# 2.7 veces mayor que en la estación de referencia.
 
-# --------------------------
-# Macrohabitat
-# --------------------------
+# Seasonjuly-september: 0.06 (p = 0.91)
 
-# Ninguna de las categorías de Macrohabitat resulta significativa.
+# No se detectan diferencias claras respecto
+# a la estación de referencia.
 
-# Lake: -1.63 (p = 0.14)
-# Presenta un efecto negativo relativamente grande, sugiriendo menor abundancia,
-# pero no significativo.
+# Seasonoctober-december: -1.58 (p = 0.012)
 
-# exp(-1.63) ≈ 0.20
-# Esto implicaría una reducción importante en abundancia, aunque con alta
-# incertidumbre.
+# Presenta un efecto negativo significativo.
 
-# Resto de categorías (High dense, Low dense, Medium dense, Plantation)
-# muestran efectos cercanos a cero y no significativos.
+# Esto indica que la abundancia esperada de
+# Aedes aegypti es menor en october-december
+# respecto a la estación de referencia.
+
+# exp(-1.58) ≈ 0.20
+
+# La abundancia esperada es aproximadamente
+# 80% menor respecto a la estación de referencia.
 
 # --------------------------
-# Dispersión
+# Microhabitat
 # --------------------------
 
-# El parámetro de dispersión es bajo (0.073), lo que indica que la varianza
-# de los datos es relativamente cercana a la media en comparación con el
-# modelo de abundancia total.
+# MicrohabitatGrinding stones: 2.70 (p = 0.003)
+
+# Presenta un efecto positivo significativo.
+
+# Esto indica que los grinding stones presentan
+# una abundancia esperada considerablemente mayor
+# respecto al microhábitat de referencia.
+
+# exp(2.70) ≈ 14.9
+
+# La abundancia esperada sería aproximadamente
+# 15 veces mayor que en el microhábitat de referencia.
+
+# Las demás categorías de Microhabitat no presentan
+# efectos significativos claros.
+
+# En Plant axils y Tree holes aparecen coeficientes
+# extremadamente grandes y errores estándar muy altos,
+# lo que probablemente indica muy pocos datos o exceso
+# de ceros en esas categorías.
+
+# --------------------------
+# Variables continuas
+# --------------------------
+
+# temp_std: -0.65 (p = 0.003)
+
+# La temperatura presenta un efecto negativo significativo.
+
+# Esto indica que, a medida que aumenta la temperatura,
+# la abundancia esperada de Aedes aegypti tiende a disminuir,
+# manteniendo constantes las demás variables.
+
+# exp(-0.65) ≈ 0.52
+
+# La abundancia esperada disminuye aproximadamente un 48%
+# por cada aumento de una desviación estándar en temperatura.
+
+# logvol_std: 0.30 (p = 0.29)
+
+# No se detecta un efecto claro del volumen
+# sobre la abundancia de Aedes aegypti.
 
 # ==========================
 # Conclusión final
 # ==========================
 
-# El modelo NB ajustado para Aedes aegypti no muestra efectos estadísticamente
-# significativos de las variables Season ni Macrohabitat sobre la abundancia.
+# El modelo NB sugiere que la abundancia de Aedes aegypti
+# está principalmente asociada a la estación, al tipo de
+# microhábitat y a la temperatura.
 
-# Si bien se observan tendencias (particularmente un aumento en feb-march y una
-# posible menor abundancia en ambientes tipo Lake), la evidencia no es suficiente
-# para afirmar relaciones claras entre estas variables y la abundancia de la especie.
+# En particular, october-december presenta menor abundancia
+# esperada, mientras que los grinding stones muestran una
+# abundancia considerablemente mayor respecto al microhábitat
+# de referencia.
 
-# A diferencia del modelo de abundancia total, donde la estacionalidad y el
-# macrohábitat resultaron relevantes, en el caso de Aedes aegypti la variabilidad
-# observada no puede ser explicada de manera concluyente por las covariables
-# consideradas.
+# Además, temperaturas más altas se asocian con menor
+# abundancia esperada de Aedes aegypti.
 
-# Esto sugiere que la dinámica de abundancia de Aedes aegypti podría estar
-# influenciada por otros factores no incluidos en el modelo o presentar una
-# mayor variabilidad intrínseca.
+# Los diagnósticos DHARMa no evidenciaron problemas importantes
+# en los residuos, lo que sugiere que el modelo presenta
+# un ajuste adecuado para los datos analizados.
+
 
 # ==========================
 # Modelo abundancia Aedes albopictus
 # ==========================
 
 modelo_albopictus_nb <- glmmTMB(
-  Aedes.albopictus ~ Season + Macrohabitat + logvol_std,
+  `Aedes albopictus` ~  Microhabitat + temp_std + logvol_std + (1 | Season),
   family = nbinom2,
   data = datos_mod
 )
 
 modelo_albopictus_zinb <- glmmTMB(
-  Aedes.albopictus ~ Season + Macrohabitat + logvol_std,
+  `Aedes albopictus` ~ Macrohabitat + temp_std + logvol_std + (1 | Season),
   ziformula = ~ Season,
   family = nbinom2,
   data = datos_mod
@@ -480,7 +615,7 @@ AIC(modelo_albopictus_nb, modelo_albopictus_zinb)
 # ==========================
 
 # La comparación entre modelos NB y ZINB muestra una diferencia de AIC
-# considerable (ΔAIC ≈ 15).
+# considerable (49)
 
 # Este valor es mayor a 10, lo que indica una mejora sustancial en el ajuste
 # del modelo ZINB respecto al modelo NB.
@@ -498,136 +633,203 @@ x11()
 plot(res_albopictus_zinb)
 
 # ==========================
-# Diagnóstico del modelo Aedes albopictus
+# Diagnóstico DHARMa
 # ==========================
 
-# La comparación entre modelos NB y ZINB mostró una diferencia de AIC
-# considerable (ΔAIC ≈ 15), lo que indica un mejor ajuste del modelo ZINB.
+# En el gráfico QQ, los residuos simulados siguen adecuadamente
+# la línea esperada, lo que indica que la distribución asumida
+# por el modelo es compatible con la estructura observada en los datos.
 
-# Esto sugiere la presencia de un proceso adicional que genera ceros,
-# justificando la inclusión del componente de inflación de ceros.
+# Los tests estadísticos asociados no resultan significativos:
 
-# --------------------------
-# Diagnóstico con DHARMa
-# --------------------------
+# Uniformidad de residuos (KS test p = 0.48):
+# p > 0.05
+# No se detectan desviaciones importantes respecto a la distribución esperada.
 
-# En el gráfico QQ, los residuos simulados se alinean adecuadamente con la línea
-# esperada, lo que indica que la distribución asumida por el modelo es consistente
-# con los datos.
+# Test de dispersión (p = 0.43):
+# p > 0.05
+# No se observan problemas importantes de sobredispersión
+# o subdispersión residual.
 
-# Los tests asociados no resultan significativos:
-# KS test p = 0.45
-# test de dispersión p = 0.576
-# test de outliers p = 0.7
+# Test de outliers (p = 0.38):
+# p > 0.05
+# La cantidad de valores extremos observada es consistente
+# con lo esperado bajo el modelo.
 
-# Esto indica que no se detectan desviaciones importantes, sobredispersión
-# residual ni valores atípicos no explicados.
+# En el gráfico de residuos versus valores predichos
+# no se observan patrones sistemáticos fuertes.
 
-# El gráfico de residuos vs valores predichos no muestra problemas relevantes.
-# Las curvas de cuantiles se mantienen dentro de las bandas de confianza,
-# lo que sugiere que el modelo captura adecuadamente la relación entre
-# la variable respuesta y las covariables.
+# Las curvas de cuantiles se mantienen relativamente horizontales
+# y dentro de las bandas de confianza, lo que sugiere que
+# el modelo representa razonablemente bien la relación entre
+# la abundancia de Aedes albopictus y las variables explicativas.
 
-# En conjunto, estos resultados indican que el modelo ZINB describe
-# adecuadamente la estructura de los datos para Aedes albopictus.
+# Se observan algunos residuos altos aislados,
+# pero no parecen generar desviaciones importantes
+# del ajuste general.
+
+# En conjunto, los diagnósticos sugieren que el modelo ZINB
+# presenta un ajuste adecuado y no evidencia problemas
+# importantes en los residuos.
+
 
 summary(modelo_albopictus_zinb)
 
 # ==========================
-# Interpretación del modelo ZINB - Aedes albopictus
+# Interpretación del modelo ZINB
+# Aedes albopictus
 # ==========================
 
-# El modelo ajustado corresponde a una binomial negativa con inflación de ceros,
-# seleccionada por su mejor ajuste respecto al modelo NB.
+# El modelo ZINB tiene dos componentes:
+# 1) El modelo condicional, que explica la abundancia de larvas.
+# 2) El modelo de inflación de ceros, que explica la probabilidad
+#    de ceros extra en los datos.
 
 # --------------------------
-# Intercepto
+# Efecto aleatorio
 # --------------------------
 
-# El intercepto (2.30) representa la abundancia esperada en escala logarítmica
-# para la categoría de referencia de Season y Macrohabitat, con volumen promedio.
+# La varianza asociada al efecto aleatorio de Season es prácticamente nula
+# (Std.Dev ≈ 0.00003).
 
-# Es significativo (p < 0.01), indicando que el valor base está bien estimado.
+# Esto indica que, una vez consideradas las variables incluidas en el modelo,
+# no queda una variabilidad importante entre estaciones a nivel aleatorio.
 
 # --------------------------
-# Season
+# Modelo condicional: abundancia
 # --------------------------
 
-# Ninguna de las categorías de Season resulta significativa en el modelo condicional.
+# El intercepto representa la abundancia esperada de Aedes albopictus
+# en escala logarítmica para la categoría de referencia de Macrohabitat,
+# con temperatura y volumen en sus valores promedio.
 
-# Esto indica que, a diferencia del modelo de abundancia total,
-# la estacionalidad no parece explicar directamente la cantidad de
-# Aedes albopictus cuando la especie está presente.
+# Intercepto: 2.16 (p < 0.001)
+
+# exp(2.16) ≈ 8.74
+
+# Esto indica que, en la condición de referencia,
+# la abundancia esperada de Aedes albopictus es relativamente alta.
 
 # --------------------------
 # Macrohabitat
 # --------------------------
 
-# High dense: -1.82 (p = 0.004)
-# Efecto negativo significativo, indicando menor abundancia en este tipo de ambiente.
+# MacrohabitatHigh dense: -1.97 (p = 0.001)
 
-# exp(-1.82) ≈ 0.16
-# Esto implica aproximadamente un 84% menos de abundancia respecto a la categoría de referencia.
+# Presenta un efecto negativo significativo.
 
-# Medium dense: efecto negativo marginal (p ≈ 0.10)
-# Sugiere una posible reducción en abundancia, aunque no concluyente.
+# Esto indica que la abundancia esperada de
+# Aedes albopictus es menor en zonas High dense
+# respecto al macrohábitat de referencia.
 
-# Resto de categorías: no significativas.
+# exp(-1.97) ≈ 0.14
+
+# La abundancia esperada es aproximadamente
+# 86% menor respecto a la categoría de referencia.
+
+# MacrohabitatLake: -0.59 (p = 0.27)
+
+# No se detectan diferencias claras respecto
+# al macrohábitat de referencia.
+
+# MacrohabitatLow dense: 0.07 (p = 0.90)
+
+# No presenta diferencias significativas.
+
+# MacrohabitatMedium dense: -0.86 (p = 0.11)
+
+# Presenta una tendencia negativa,
+# aunque la evidencia no es concluyente.
+
+# exp(-0.86) ≈ 0.42
+
+# Esto podría indicar una abundancia esperada
+# aproximadamente 58% menor.
+
+# MacrohabitatPlantation: -0.19 (p = 0.66)
+
+# No muestra diferencias claras respecto
+# a la categoría de referencia.
 
 # --------------------------
-# Volumen
+# Variables continuas
 # --------------------------
 
-# logvol_std: 0.52 (p = 0.0016)
-# Efecto positivo y significativo.
+# temp_std: 0.42 (p ≈ 0.062)
 
-# Esto indica que a mayor volumen de agua, mayor abundancia de Aedes albopictus.
+# Presenta una tendencia positiva marginal.
 
-# exp(0.52) ≈ 1.68
-# Aproximadamente un 68% más de abundancia por unidad estandarizada de volumen.
+# Esto sugiere que, a medida que aumenta la temperatura,
+# la abundancia esperada de Aedes albopictus podría aumentar,
+# aunque la evidencia no es concluyente.
+
+# exp(0.42) ≈ 1.53
+
+# La abundancia esperada sería aproximadamente
+# 1.5 veces mayor por cada aumento de una desviación estándar
+# en temperatura.
+
+# logvol_std: -0.33 (p = 0.19)
+
+# No se detecta un efecto claro del volumen
+# sobre la abundancia de Aedes albopictus.
 
 # --------------------------
 # Modelo de inflación de ceros
 # --------------------------
 
-# Intercepto significativo (p < 0.001), lo que indica una probabilidad base
-# de ceros relativamente alta.
+# Este componente modela la probabilidad de obtener
+# ceros extra en los datos.
 
-# Seasonjuly-september: -1.48 (p = 0.022)
-# Efecto negativo significativo.
+# Intercepto: 5.01 (p < 0.001)
 
-# Esto indica que en esta estación disminuye la probabilidad de ceros,
-# es decir, es más probable encontrar la especie.
+# Indica una probabilidad importante de ceros extra
+# en la estación de referencia.
 
-# exp(-1.48) ≈ 0.23
-# Aproximadamente un 77% menos probabilidad de ausencia.
+# Seasonfeb-march: -1.12 (p = 0.33)
 
-# Resto de categorías: no significativas.
+# No muestra diferencias claras respecto
+# a la estación de referencia.
 
+# Seasonjuly-september: -3.12 (p = 0.002)
+
+# Presenta un efecto negativo significativo
+# sobre la inflación de ceros.
+
+# exp(-3.12) ≈ 0.04
+
+# Esto indica que las odds de obtener ceros extra
+# son aproximadamente 96% menores respecto
+# a la estación de referencia.
+
+# En otras palabras, durante july-september
+# disminuye considerablemente la probabilidad
+# de observar ausencia estructural de larvas.
+
+# Seasonoctober-december: -0.77 (p = 0.49)
+
+# No presenta diferencias significativas
+# respecto a la estación de referencia.
 
 # ==========================
-# Conclusión final - Aedes albopictus
+# Conclusión final
 # ==========================
 
-# El modelo ZINB seleccionado describe adecuadamente la abundancia de
-# Aedes albopictus, capturando tanto la variabilidad en los conteos como
-# la presencia de ceros adicionales.
+# El modelo ZINB sugiere que la abundancia de
+# Aedes albopictus está principalmente asociada
+# al macrohábitat y parcialmente a la temperatura.
 
-# A diferencia de Aedes aegypti, en esta especie se detecta un patrón claro
-# de inflación de ceros, lo que indica una mayor intermitencia en su presencia
-# en los criaderos.
+# En particular, las zonas High dense presentan
+# una abundancia considerablemente menor respecto
+# al macrohábitat de referencia.
 
-# La abundancia de Aedes albopictus se asocia principalmente con el volumen
-# de agua disponible y con el tipo de macrohábitat, mostrando menor abundancia
-# en ambientes de alta densidad.
+# Además, july-september muestra una reducción importante
+# en la probabilidad de ceros extra, lo que sugiere
+# condiciones más favorables para la presencia
+# de Aedes albopictus durante esa estación.
 
-# Por otro lado, la estacionalidad no afecta significativamente la abundancia,
-# pero sí influye en la probabilidad de presencia, particularmente en la
-# estación july-september, donde la especie es más frecuente.
-
-# En conjunto, estos resultados sugieren que Aedes albopictus responde a
-# condiciones estructurales del ambiente (como el volumen de agua), y presenta
-# una dinámica más discontinua, alternando entre presencia y ausencia según
-# las condiciones.
+# Los diagnósticos DHARMa no evidenciaron problemas
+# importantes en los residuos, lo que indica
+# un ajuste adecuado del modelo.
 
 

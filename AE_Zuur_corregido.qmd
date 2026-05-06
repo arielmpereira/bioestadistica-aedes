@@ -10,7 +10,7 @@ Bioestadistica
 
 Articulo: Dharmamuthuraja D, P. D. R, Lakshmi M. I, Isvaran K, Ghosh SK, Ishtiaq F. 2023. *Determinants of Aedes mosquito larval ecology in a heterogeneous urban environment- a longitudinal study in Bengaluru, India*. PLoS Neglected Tropical Diseases 17(11): e0011702.
 
-Este documento retoma la estructura del AE basado en Zuur et al. (2010), pero corrige dos decisiones iniciales importantes: la unidad de analisis y el filtrado de la base. En vez de comenzar eliminando los criaderos secos, primero se trabaja con toda la base. Despues se hace un analisis complementario con criaderos humedos y, como chequeo secundario, con las grillas `Index`.
+Este documento sigue la estructura del AE propuesta por Zuur et al. (2010). Se trabaja primero con toda la base, sin eliminar los criaderos secos desde el inicio. Despues se hace un analisis complementario con criaderos humedos y, como chequeo secundario, con las grillas `Index`.
 
 ## Carga y preparacion de datos
 
@@ -113,7 +113,7 @@ sum(is.na(datos$collection_date))
 
 ## Unidad de analisis
 
-En la version inicial del AE se agrupaba por `Sl.no`, pero ese campo no identifica de manera unica un criadero. En la base completa hay muchos menos valores unicos de `Sl.no` que criaderos potenciales inspeccionados.
+El campo `Sl.no` no identifica de manera unica un criadero. En la base completa hay muchos menos valores unicos de `Sl.no` que criaderos potenciales inspeccionados.
 
 ```{r}
 n_filas <- nrow(datos)
@@ -452,7 +452,7 @@ ggplot(
 
 ## Abundancia condicionada a presencia
 
-Esta parte rescata una idea util del AE inicial: mirar la abundancia solo entre criaderos con conteos positivos. No reemplaza el analisis de ceros, pero ayuda a pensar un modelo de dos procesos: presencia/ausencia y abundancia condicionada a presencia.
+Resulta util mirar la abundancia solo entre criaderos con conteos positivos. No reemplaza el analisis de ceros, pero ayuda a pensar un modelo de dos procesos: presencia/ausencia y abundancia condicionada a presencia.
 
 ```{r}
 ae_tot_pos <- datos_criadero %>% filter(total_mosquito_emerged > 0)
@@ -485,7 +485,7 @@ datos_criadero %>%
 
 ## Analisis complementario: criaderos humedos e Index
 
-El filtrado `log volume > 0` no se usa como punto de partida del control general de la base, porque elimina los habitats secos y borra ceros estructurales. Sin embargo, a partir de la sugerencia del docente, este filtro se vuelve central para mostrar si sigue habiendo muchos ceros aun despues de sacar los recipientes sin agua. Esa es justamente la situacion que puede justificar modelos inflados en cero.
+El filtrado `log volume > 0` no se usa como punto de partida del control general de la base, porque elimina los habitats secos y borra ceros estructurales. Sin embargo, este filtro resulta central para mostrar si sigue habiendo muchos ceros aun despues de sacar los recipientes sin agua. Esa es justamente la situacion que puede justificar modelos inflados en cero.
 
 ```{r}
 datos_humedos_modelos <- datos_criadero %>%
@@ -528,7 +528,7 @@ tibble(
 
 ## Modelos inflados en cero
 
-Para responder al pedido del docente, se ajustan tres modelos de conteo inflados en cero, uno para cada respuesta: abundancia total de mosquitos emergidos, abundancia de *Aedes aegypti* y abundancia de *Aedes albopictus*. Los modelos se ajustan sobre criaderos con agua y usan variables numericas estandarizadas: temperatura, pH y logaritmo del volumen.
+Se ajustan tres modelos de conteo inflados en cero, uno para cada respuesta: abundancia total de mosquitos emergidos, abundancia de *Aedes aegypti* y abundancia de *Aedes albopictus*. Los modelos se ajustan sobre criaderos con agua y usan variables numericas estandarizadas: temperatura, pH y logaritmo del volumen.
 
 Ademas de los modelos inflados en cero, se ajustan modelos Poisson y binomial negativo simples para comparar AIC. Esta comparacion no es el analisis final del TP, pero ayuda a mostrar por que Poisson es insuficiente y por que la binomial negativa o los modelos inflados en cero son candidatos razonables.
 
@@ -629,7 +629,7 @@ El modelo ZINB combina las dos necesidades: sobredispersion e inflacion de ceros
 
 ## Avance sobre relaciones no lineales
 
-El docente tambien pidio pensar como modelar relaciones no lineales de temperatura, pH y volumen. Una forma razonable de hacerlo es comparar efectos lineales contra splines naturales de baja complejidad. En este avance usamos `df = 3`, para permitir curvatura sin volver el modelo demasiado flexible. Las variables numericas siguen estandarizadas.
+Tambien resulta relevante explorar como modelar relaciones no lineales de temperatura, pH y volumen. Una forma razonable de hacerlo es comparar efectos lineales contra splines naturales de baja complejidad. En este avance usamos `df = 3`, para permitir curvatura sin volver el modelo demasiado flexible. Las variables numericas siguen estandarizadas.
 
 ```{r}
 ajustar_seguro <- function(expr) {

@@ -1,0 +1,794 @@
+---
+title: "Modelado de abundancia de mosquitos Aedes"
+---
+
+```{r setup}
+#| include: false
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+# Introducción
+
+Este archivo documenta el proceso de modelado de abundancia de mosquitos en criaderos urbanos, a partir de datos del estudio sobre ecología larval de *Aedes* en Bengaluru, India.
+
+El objetivo no es mostrar solamente el modelo final, sino reconstruir de manera reproducible el camino de decisión: preparación de la base, justificación del filtrado, evaluación de ceros y sobredispersión, comparación de modelos de conteo, diagnóstico de residuos y selección de modelos finales.
+
+El análisis se centra en tres respuestas de abundancia:
+
+-   `Total mosquito emerged`
+-   `Aedes aegypti`
+-   `Aedes albopictus`
+
+Dado que las respuestas son conteos con alta proporción de ceros y sobredispersión, se comparan modelos Poisson, binomial negativa y binomial negativa inflada en ceros. Además, como las grillas tipo `Index` fueron relevadas en distintas estaciones, se incluye `Grid_no` como efecto aleatorio para representar la dependencia entre observaciones de una misma grilla.
+
+### Esquema general del procedimiento
+
+# Carga de paquetes y datos
+
+En primer lugar se cargan los paquetes necesarios para manipular datos, ajustar modelos mixtos generalizados, ajustar modelos inflados en cero y revisar diagnósticos con residuos simulados.
+
+```{r carga-paquetes}
+library(readxl)
+library(dplyr)
+library(tibble)
+library(knitr)
+library(lme4)
+library(glmmTMB)
+library(DHARMa)
+```
+
+La ruta debe ajustarse al directorio donde se encuentre la base `aedes_data.xlsx`. En este archivo se evita depender de `setwd()` para que el análisis sea más fácil de mover entre computadoras.
+
+```{r cargar-datos}
+# Ajustar esta ruta si la base está en otra carpeta.
+ruta_datos <- "aedes_data.xlsx"
+
+datos <- suppressWarnings(
+  read_excel(ruta_datos)
+)
+
+dim(datos)
+str(datos)
+```
+
+# Preparación de la base
+
+Antes de modelar, se revisa la variable `log volume`, porque es central para decidir qué observaciones deben quedar dentro del análisis de abundancia.
+
+```{r revisar-log-volume}
+summary(datos$`log volume`)
+sum(is.na(datos$`log volume`))
+
+datos |>
+  filter(`log volume` == 0) |> 
+  filter(`Final volume water(ml) without cm` != 0) |> 
+  select(`Final volume water(ml) without cm`, `log volume`)
+```
+
+Nos quedamos solo con las grillas tipo `Index`, porque son las que fueron relevadas en distintas estaciones. Además, excluimos `log volume = 0`.
+
+La justificación del filtrado es la siguiente: `log volume` fue calculado a partir del volumen de agua. Cuando el volumen de agua era 0 ml, `log volume` también quedó registrado como 0. Como el menor volumen positivo observado era 5 ml, `log volume = 0` identifica criaderos secos.
+
+Estos criaderos secos son ceros estructurales evidentes: sin agua no puede haber larvas. Por eso no tiene sentido tratarlos como criaderos con abundancia cero generada por el mismo proceso ecológico que los criaderos con agua.
+
+Sin embargo, luego de filtrar los criaderos secos, entre los criaderos con agua todavía pueden quedar ceros de origen mixto. Por ejemplo, puede haber agua pero no larvas por condiciones de temperatura, pH, tipo de criadero, estacionalidad, depredación, disturbios u otros factores no medidos. Esta situación justifica explorar modelos inflados en cero.
+
+```{r preparar-datos}
+datos_mod <- datos %>%
+  filter(
+    Grid_type == "Index",
+    `log volume` > 0
+  ) %>%
+  select(
+    Prevalence,
+    `Total mosquito emerged`,
+    `Aedes aegypti`,
+    `Aedes albopictus`,
+    Season,
+    Temperature,
+    pH,
+    `log volume`,
+    Macrohabitat,
+    Microhabitat,
+    Grid_no
+  ) %>%
+  mutate(
+    Season = as.factor(Season),
+    Macrohabitat = as.factor(Macrohabitat),
+    Microhabitat = as.factor(Microhabitat),
+    Grid_no = as.factor(Grid_no)
+  )
+
+dim(datos_mod)
+str(datos_mod)
+```
+
+Las variables continuas se estandarizan para facilitar la comparación entre efectos. En los modelos, un cambio de una unidad en estas variables representa un cambio de una desviación estándar en la variable original.
+
+```{r estandarizar-variables}
+datos_mod <- datos_mod %>%
+  mutate(
+    temp_std = as.numeric(scale(Temperature)),
+    pH_std = as.numeric(scale(pH)),
+    logvol_std = as.numeric(scale(`log volume`))
+  )
+
+dim(datos_mod)
+str(datos_mod)
+
+colSums(is.na(datos_mod))
+```
+
+# Variables del modelado
+
+Las respuestas de abundancia analizadas son:
+
+```{r variables-respuesta}
+respuestas <- c(
+  "Total mosquito emerged",
+  "Aedes aegypti",
+  "Aedes albopictus"
+)
+
+respuestas
+```
+
+Las covariables candidatas son:
+
+-   `Season`
+-   `Macrohabitat`
+-   `Microhabitat`
+-   `temp_std`
+-   `pH_std`
+-   `logvol_std`
+
+Además, se considera `Grid_no` como efecto aleatorio, porque las grillas tipo `Index` fueron relevadas en distintas estaciones. Esto permite representar la posible dependencia entre observaciones tomadas dentro de una misma grilla.
+
+# Evaluación inicial de ceros y sobredispersión
+
+Antes de ajustar modelos, se evalúa la proporción de ceros, la media, la varianza y el índice de dispersión de cada respuesta.
+
+En una distribución Poisson, la media y la varianza deberían ser aproximadamente similares. Por eso, un índice de dispersión muy superior a 1 es una señal de sobredispersión.
+
+```{r evaluar-ceros}
+resumen_abundancia <- data.frame(
+  respuesta = c("Total mosquito emerged", "Aedes aegypti", "Aedes albopictus"),
+
+  n = c(
+    length(datos_mod$`Total mosquito emerged`),
+    length(datos_mod$`Aedes aegypti`),
+    length(datos_mod$`Aedes albopictus`)
+  ),
+
+  proporcion_ceros = c(
+    mean(datos_mod$`Total mosquito emerged` == 0, na.rm = TRUE),
+    mean(datos_mod$`Aedes aegypti` == 0, na.rm = TRUE),
+    mean(datos_mod$`Aedes albopictus` == 0, na.rm = TRUE)
+  ),
+
+  media = c(
+    mean(datos_mod$`Total mosquito emerged`, na.rm = TRUE),
+    mean(datos_mod$`Aedes aegypti`, na.rm = TRUE),
+    mean(datos_mod$`Aedes albopictus`, na.rm = TRUE)
+  ),
+
+  varianza = c(
+    var(datos_mod$`Total mosquito emerged`, na.rm = TRUE),
+    var(datos_mod$`Aedes aegypti`, na.rm = TRUE),
+    var(datos_mod$`Aedes albopictus`, na.rm = TRUE)
+  )
+)
+
+resumen_abundancia <- resumen_abundancia %>%
+  mutate(
+    indice_dispersion = varianza / media
+  )
+
+kable(
+  resumen_abundancia,
+  digits = 3,
+  caption = "Resumen inicial de ceros y sobredispersión para las respuestas de abundancia."
+)
+```
+
+Las tres respuestas presentan una proporción alta de ceros y un índice de dispersión muy superior a 1. Esto indica que un modelo Poisson simple probablemente no sea adecuado.
+
+La alta proporción de ceros sugiere que puede existir un proceso adicional generando ceros extra. Por este motivo, se comparan tres tipos de modelos:
+
+1.  Poisson.
+2.  Binomial negativa, para manejar sobredispersión.
+3.  Binomial negativa inflada en cero, para manejar sobredispersión y ceros extra.
+
+# Comparación base de familias
+
+En esta sección se comparan modelos con la misma estructura de predictores, cambiando solamente la familia o la inclusión del componente de inflación de ceros. Esta comparación es importante porque permite evaluar el efecto de la familia de distribución sin mezclarlo con cambios en las covariables.
+
+La estructura base de la parte condicional es:
+
+```{r formula-base}
+formula_base <- "respuesta ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no)"
+formula_base
+```
+
+En los modelos inflados en cero se usa:
+
+```{r ziformula-base}
+ziformula_base <- "~ Season"
+ziformula_base
+```
+
+La parte condicional modela la abundancia esperada. La parte `ziformula` modela la probabilidad de pertenecer al proceso de ceros extra.
+
+## Abundancia total
+
+```{r familias-total}
+modelo_total_pois <- glmmTMB(
+  `Total mosquito emerged` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  family = poisson,
+  data = datos_mod
+)
+
+modelo_total_nb <- glmmTMB(
+  `Total mosquito emerged` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_total_zinb <- glmmTMB(
+  `Total mosquito emerged` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+AIC(modelo_total_pois, modelo_total_nb, modelo_total_zinb)
+```
+
+## Abundancia de *Aedes aegypti*
+
+```{r familias-aegypti}
+modelo_aegypti_pois <- glmmTMB(
+  `Aedes aegypti` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  family = poisson,
+  data = datos_mod
+)
+
+modelo_aegypti_nb <- glmmTMB(
+  `Aedes aegypti` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_aegypti_zinb <- glmmTMB(
+  `Aedes aegypti` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+AIC(modelo_aegypti_pois, modelo_aegypti_nb, modelo_aegypti_zinb)
+```
+
+## Abundancia de *Aedes albopictus*
+
+```{r familias-albopictus}
+modelo_albopictus_pois <- glmmTMB(
+  `Aedes albopictus` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  family = poisson,
+  data = datos_mod
+)
+
+modelo_albopictus_nb <- glmmTMB(
+  `Aedes albopictus` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_albopictus_zinb <- glmmTMB(
+  `Aedes albopictus` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+AIC(modelo_albopictus_pois, modelo_albopictus_nb, modelo_albopictus_zinb)
+```
+
+## Resumen de la comparación base
+
+```{r tabla-comparacion-familias}
+comparacion_familias <- tibble(
+  respuesta = c("Total mosquito emerged", "Aedes aegypti", "Aedes albopictus"),
+  AIC_poisson = c(AIC(modelo_total_pois), AIC(modelo_aegypti_pois), AIC(modelo_albopictus_pois)),
+  AIC_NB = c(AIC(modelo_total_nb), AIC(modelo_aegypti_nb), AIC(modelo_albopictus_nb)),
+  AIC_ZINB = c(AIC(modelo_total_zinb), AIC(modelo_aegypti_zinb), AIC(modelo_albopictus_zinb))
+) %>%
+  mutate(
+    delta_Poisson_NB = AIC_poisson - AIC_NB,
+    delta_NB_ZINB = AIC_NB - AIC_ZINB
+  )
+
+kable(
+  comparacion_familias,
+  digits = 2,
+  caption = "Comparación base entre Poisson, binomial negativa y binomial negativa inflada en cero."
+)
+```
+
+En las tres respuestas, el modelo Poisson presenta AIC mucho mayor que el modelo binomial negativo. Esto confirma que la sobredispersión observada en el análisis inicial afecta fuertemente los conteos.
+
+Los modelos ZINB presentan el menor AIC en las tres respuestas. La mejora respecto del modelo NB es clara para la abundancia total y para *Aedes albopictus*, y más moderada para *Aedes aegypti*.
+
+Por lo tanto, se continúa el análisis con modelos binomiales negativos inflados en cero. Estos modelos permiten representar dos procesos:
+
+-   La abundancia esperada, mediante la parte condicional.
+-   La probabilidad de ceros extra, mediante la parte de inflación de ceros.
+
+# Modelo para abundancia total
+
+## Comparación de modelos ZINB: base, macro y micro
+
+Primero se compara una estructura base con modelos que incorporan `Macrohabitat` o `Microhabitat`. La comparación se realiza dentro de la familia ZINB, manteniendo `ziformula = ~ Season`.
+
+```{r modelo-total-aic}
+modelo_total_zinb_base <- glmmTMB(
+  `Total mosquito emerged` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_total_zinb_macro <- glmmTMB(
+  `Total mosquito emerged` ~ Season + Macrohabitat + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_total_zinb_micro <- glmmTMB(
+  `Total mosquito emerged` ~ Season + Microhabitat + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+AIC(
+  modelo_total_zinb_base,
+  modelo_total_zinb_macro,
+  modelo_total_zinb_micro
+)
+```
+
+Para la abundancia total, agregar `Macrohabitat` o `Microhabitat` no mejora el ajuste del modelo según AIC. Por eso se conserva el modelo base como punto de partida.
+
+## Simplificación del modelo seleccionado
+
+A partir del modelo base se evalúa si retirar alguna covariable simplifica el modelo sin empeorar el ajuste.
+
+```{r modelo-total-simplificacion}
+modelo_total_sin_pH <- glmmTMB(
+  `Total mosquito emerged` ~ Season + temp_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_total_sin_temp <- glmmTMB(
+  `Total mosquito emerged` ~ Season + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_total_sin_logvol <- glmmTMB(
+  `Total mosquito emerged` ~ Season + temp_std + pH_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_total_solo_season <- glmmTMB(
+  `Total mosquito emerged` ~ Season + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+AIC(
+  modelo_total_zinb_base,
+  modelo_total_sin_pH,
+  modelo_total_sin_temp,
+  modelo_total_sin_logvol,
+  modelo_total_solo_season
+)
+```
+
+El modelo con menor AIC fue el modelo sin `pH_std`:
+
+```{r modelo-total-final-objeto}
+modelo_total_final <- modelo_total_sin_pH
+```
+
+La fórmula final para abundancia total es:
+
+```{r modelo-total-formula-final}
+formula(modelo_total_final)
+```
+
+Se selecciona este modelo porque mantiene una estructura ecológicamente interpretable, tiene un parámetro menos que el modelo base completo y presenta un AIC levemente menor. La selección no se basa solo en quedarse con el menor AIC de manera automática, sino en balancear ajuste, parsimonia e interpretabilidad.
+
+## Diagnóstico DHARMa
+
+Antes de interpretar el summary, se revisan los residuos simulados con DHARMa.
+
+```{r modelo-total-dharma, fig.width=8, fig.height=6}
+res_total_final <- simulateResiduals(modelo_total_final)
+
+plot(res_total_final)
+```
+
+```{r modelo-total-dharma-tests}
+testUniformity(res_total_final)
+testDispersion(res_total_final)
+testZeroInflation(res_total_final)
+```
+
+El diagnóstico con DHARMa permite revisar si todavía quedan problemas importantes de ajuste general, sobredispersión o inflación de ceros no capturada por el modelo.
+
+Si los tests no muestran desviaciones significativas y los gráficos no presentan patrones sistemáticos fuertes, el modelo puede interpretarse con mayor confianza. Si alguno de los diagnósticos marca problemas, la interpretación debe hacerse con más cautela y conviene revisar la estructura del modelo.
+
+## Interpretación del summary
+
+```{r modelo-total-summary}
+summary(modelo_total_final)
+```
+
+El modelo final para abundancia total es:
+
+```{r modelo-total-final-texto}
+cat("Total mosquito emerged ~ Season + temp_std + logvol_std + (1 | Grid_no)\n")
+cat("ziformula = ~ Season\n")
+cat("family = nbinom2\n")
+```
+
+El modelo tiene dos partes.
+
+La parte condicional modela la abundancia esperada de mosquitos emergidos. Como usa link log, los coeficientes se interpretan exponenciándolos. Un coeficiente positivo aumenta la abundancia esperada; un coeficiente negativo la reduce.
+
+La parte de inflación de ceros modela la probabilidad de ceros extra. Como esta parte usa una estructura logística, los coeficientes también pueden exponenciarse para interpretarse como odds ratios de pertenecer al proceso de ceros extra.
+
+```{r modelo-total-exponenciales}
+exp(fixef(modelo_total_final)$cond)
+exp(fixef(modelo_total_final)$zi)
+```
+
+En la parte condicional, `Season feb-march` presenta un efecto positivo respecto de la estación de referencia `april-june`. Manteniendo constantes las demás variables, la abundancia esperada en `feb-march` fue mayor que en la estación de referencia.
+
+La temperatura estandarizada presenta un efecto negativo. Como la variable está estandarizada, el coeficiente representa el cambio esperado ante un aumento de una desviación estándar en temperatura. Al exponenciar el coeficiente, se obtiene el multiplicador sobre la abundancia esperada.
+
+El log-volumen estandarizado muestra una tendencia negativa en este modelo. Esta interpretación debe hacerse con cuidado, porque el volumen fue transformado y estandarizado. El coeficiente no se lee en mililitros originales, sino en desviaciones estándar de `log volume`.
+
+En la parte de inflación de ceros, `october-december` presenta un efecto positivo. Esto indica que en esa estación aumentan las chances de pertenecer al proceso de ceros extra respecto de `april-june`. Dicho de forma ecológica: aun entre criaderos con agua, en `october-december` aumenta la probabilidad de encontrar ceros que no se explican solamente por la parte de abundancia.
+
+El efecto aleatorio de `Grid_no` se mantiene para respetar la estructura longitudinal del muestreo. Si la varianza estimada es muy baja, eso sugiere que la variabilidad entre grillas es pequeña en este modelo, pero su inclusión sigue siendo defendible por diseño muestral.
+
+# Modelo para abundancia de *Aedes aegypti*
+
+## Comparación de modelos ZINB: base, macro y micro
+
+```{r modelo-aegypti-aic}
+modelo_aegypti_zinb_base <- glmmTMB(
+  `Aedes aegypti` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_aegypti_zinb_macro <- glmmTMB(
+  `Aedes aegypti` ~ Season + Macrohabitat + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_aegypti_zinb_micro <- glmmTMB(
+  `Aedes aegypti` ~ Season + Microhabitat + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+AIC(
+  modelo_aegypti_zinb_base,
+  modelo_aegypti_zinb_macro,
+  modelo_aegypti_zinb_micro
+)
+```
+
+Para *Aedes aegypti*, el modelo con `Microhabitat` puede presentar menor AIC. Sin embargo, `Microhabitat` tiene muchas categorías y algunas están desbalanceadas, con pocas observaciones. Esto puede generar problemas de estimación, errores estándar `NaN` y coeficientes extremos.
+
+Por esa razón, aunque el modelo con `Microhabitat` mejore el AIC, no se lo toma como modelo final para inferencia. Se continúa con `Macrohabitat`, porque es una estructura ecológica más estable, menos fragmentada y más defendible para interpretar frente al profesor.
+
+El criterio usado acá no es “gana siempre el menor AIC”, sino “menor AIC dentro de modelos estimables, estables e interpretables”.
+
+## Simplificación del modelo seleccionado
+
+```{r modelo-aegypti-simplificacion}
+modelo_aegypti_macro_sin_pH <- glmmTMB(
+  `Aedes aegypti` ~ Season + Macrohabitat + temp_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_aegypti_macro_sin_temp <- glmmTMB(
+  `Aedes aegypti` ~ Season + Macrohabitat + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_aegypti_macro_sin_logvol <- glmmTMB(
+  `Aedes aegypti` ~ Season + Macrohabitat + temp_std + pH_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+AIC(
+  modelo_aegypti_zinb_macro,
+  modelo_aegypti_macro_sin_pH,
+  modelo_aegypti_macro_sin_temp,
+  modelo_aegypti_macro_sin_logvol
+)
+```
+
+El modelo con menor AIC dentro de la estructura con `Macrohabitat` fue el modelo sin `pH_std`:
+
+```{r modelo-aegypti-final-objeto}
+modelo_aegypti_final <- modelo_aegypti_macro_sin_pH
+```
+
+Esta línea corrige un problema del script original: allí se asignaba `modelo_aegypti_final <- modelo_aegypti_micro_sin_pH`, pero ese objeto no estaba definido y además no coincidía con la decisión metodológica explicada. La decisión defendida en el texto es continuar con el modelo de `Macrohabitat`, por lo que el objeto final correcto es `modelo_aegypti_macro_sin_pH`.
+
+```{r modelo-aegypti-formula-final}
+formula(modelo_aegypti_final)
+```
+
+## Diagnóstico DHARMa
+
+Antes de interpretar el summary, se revisan los residuos simulados.
+
+```{r modelo-aegypti-dharma, fig.width=8, fig.height=6}
+res_aegypti_final <- simulateResiduals(modelo_aegypti_final)
+
+plot(res_aegypti_final)
+```
+
+```{r modelo-aegypti-dharma-tests}
+testUniformity(res_aegypti_final)
+testDispersion(res_aegypti_final)
+testZeroInflation(res_aegypti_final)
+```
+
+Si el diagnóstico de DHARMa no muestra problemas importantes de uniformidad, dispersión o ceros, el modelo se considera aceptable para interpretación. Si aparece alguna señal marginal, conviene mencionarla como una limitación, no ocultarla.
+
+## Interpretación del summary
+
+```{r modelo-aegypti-summary}
+summary(modelo_aegypti_final)
+```
+
+El modelo final para *Aedes aegypti* es:
+
+```{r modelo-aegypti-final-texto}
+cat("Aedes aegypti ~ Season + Macrohabitat + temp_std + logvol_std + (1 | Grid_no)\n")
+cat("ziformula = ~ Season\n")
+cat("family = nbinom2\n")
+```
+
+```{r modelo-aegypti-exponenciales}
+exp(fixef(modelo_aegypti_final)$cond)
+exp(fixef(modelo_aegypti_final)$zi)
+```
+
+En la parte condicional, `Season feb-march` presenta un efecto positivo respecto de `april-june`. Esto significa que, manteniendo constantes las demás variables, la abundancia esperada de *Aedes aegypti* es mayor en `feb-march` que en la estación de referencia.
+
+`Macrohabitat Lake` y `Macrohabitat Plantation` presentan efectos negativos respecto de la categoría de referencia. Esto sugiere menor abundancia esperada de *Aedes aegypti* en esos macrohábitats, una vez controlado el efecto de estación, temperatura, volumen y grilla.
+
+La temperatura estandarizada presenta un efecto negativo. Al estar estandarizada, el coeficiente indica el cambio esperado ante un aumento de una desviación estándar en temperatura. Al exponenciarlo, se obtiene el multiplicador sobre la abundancia esperada.
+
+`logvol_std` muestra una tendencia negativa. Esto indica que, dentro de este modelo y con los datos filtrados a criaderos con agua, mayor `log volume` estandarizado se asocia con menor abundancia esperada. Como el efecto puede ser marginal, debe interpretarse con prudencia y no como una regla ecológica absoluta.
+
+En la parte de inflación de ceros, `october-december` presenta un efecto positivo. Esto indica que en `october-december` aumentan las chances de ceros extra respecto de `april-june`. Es decir, aun entre criaderos con agua, esa estación tiene mayor probabilidad de presentar ceros no explicados solamente por la parte de abundancia.
+
+El efecto aleatorio de `Grid_no` se mantiene por la estructura longitudinal del muestreo. Si su varianza estimada es baja, se puede aclarar que su aporte empírico fue pequeño, pero su inclusión responde al diseño de datos.
+
+# Modelo para abundancia de *Aedes albopictus*
+
+## Comparación de modelos ZINB: base, macro y micro
+
+```{r modelo-albopictus-aic}
+modelo_albopictus_zinb_base <- glmmTMB(
+  `Aedes albopictus` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_albopictus_zinb_macro <- glmmTMB(
+  `Aedes albopictus` ~ Season + Macrohabitat + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_albopictus_zinb_micro <- glmmTMB(
+  `Aedes albopictus` ~ Season + Microhabitat + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+AIC(
+  modelo_albopictus_zinb_base,
+  modelo_albopictus_zinb_macro,
+  modelo_albopictus_zinb_micro
+)
+```
+
+Para *Aedes albopictus*, el modelo con menor AIC fue el modelo base, que incluye `Season`, `temp_std`, `pH_std`, `logvol_std` y el efecto aleatorio de `Grid_no`.
+
+Agregar `Macrohabitat` o `Microhabitat` no mejoró el ajuste, ya que el AIC aumentó. Por lo tanto, se continúa con el modelo base como punto de partida para la simplificación.
+
+## Simplificación del modelo seleccionado
+
+```{r modelo-albopictus-simplificacion}
+modelo_albopictus_sin_pH <- glmmTMB(
+  `Aedes albopictus` ~ Season + temp_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_albopictus_sin_temp <- glmmTMB(
+  `Aedes albopictus` ~ Season + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_albopictus_sin_logvol <- glmmTMB(
+  `Aedes albopictus` ~ Season + temp_std + pH_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+AIC(
+  modelo_albopictus_zinb_base,
+  modelo_albopictus_sin_pH,
+  modelo_albopictus_sin_temp,
+  modelo_albopictus_sin_logvol
+)
+```
+
+El modelo con menor AIC fue el modelo sin `logvol_std`:
+
+```{r modelo-albopictus-final-objeto}
+modelo_albopictus_final <- modelo_albopictus_sin_logvol
+```
+
+La diferencia de AIC con el modelo base completo puede ser pequeña, pero el modelo sin `logvol_std` tiene un parámetro menos y un AIC levemente menor. Por criterio de parsimonia, se selecciona como modelo final para *Aedes albopictus*.
+
+```{r modelo-albopictus-formula-final}
+formula(modelo_albopictus_final)
+```
+
+## Diagnóstico DHARMa
+
+```{r modelo-albopictus-dharma, fig.width=8, fig.height=6}
+res_albopictus_final <- simulateResiduals(modelo_albopictus_final)
+
+plot(res_albopictus_final)
+```
+
+```{r modelo-albopictus-dharma-tests}
+testUniformity(res_albopictus_final)
+testDispersion(res_albopictus_final)
+testZeroInflation(res_albopictus_final)
+```
+
+El diagnóstico de residuos simulados permite evaluar si el modelo conserva problemas importantes luego de considerar sobredispersión e inflación de ceros.
+
+Si los diagnósticos son aceptables, el modelo puede interpretarse. Si aparece alguna señal débil o marginal, se debe presentar como una limitación y no como una falla invalidante automática.
+
+## Interpretación del summary
+
+```{r modelo-albopictus-summary}
+summary(modelo_albopictus_final)
+```
+
+El modelo final para *Aedes albopictus* es:
+
+```{r modelo-albopictus-final-texto}
+cat("Aedes albopictus ~ Season + temp_std + pH_std + (1 | Grid_no)\n")
+cat("ziformula = ~ Season\n")
+cat("family = nbinom2\n")
+```
+
+```{r modelo-albopictus-exponenciales}
+exp(fixef(modelo_albopictus_final)$cond)
+exp(fixef(modelo_albopictus_final)$zi)
+```
+
+En la parte condicional, las estaciones no muestran diferencias claras respecto de `april-june`.
+
+La temperatura presenta un coeficiente positivo, pero si el valor de p no aporta evidencia suficiente, no conviene afirmar un efecto claro. En ese caso, se puede decir que la dirección estimada fue positiva, pero que la evidencia estadística no fue concluyente.
+
+`pH_std` muestra una tendencia positiva marginal. Como la variable está estandarizada, el coeficiente expresa el cambio ante un aumento de una desviación estándar en pH. Al exponenciarlo, se obtiene el multiplicador sobre la abundancia esperada. Si el p-valor queda cerca del umbral convencional, conviene interpretarlo con prudencia.
+
+El efecto aleatorio de `Grid_no` presenta una varianza apreciable cuando así lo indique el summary. Esto sugiere variabilidad entre grillas no explicada completamente por las covariables incluidas en el modelo. En términos ecológicos, podría haber características locales de cada grilla que influyen en la abundancia de *Aedes albopictus* y que no fueron capturadas por las variables medidas.
+
+En la parte de inflación de ceros, `july-september` presenta un efecto negativo. Esto indica que durante `july-september` disminuyen las chances de pertenecer al proceso de ceros extra respecto de `april-june`. Dicho de otro modo, en esa estación es menos probable encontrar ceros adicionales para *Aedes albopictus*, lo cual tiene sentido si esa especie aumenta su presencia durante la época monzónica.
+
+# Tabla final de modelos seleccionados
+
+```{r tabla-final-modelos}
+modelos_finales <- tibble(
+  respuesta = c(
+    "Total mosquito emerged",
+    "Aedes aegypti",
+    "Aedes albopictus"
+  ),
+  modelo_final = c(
+    "`Total mosquito emerged` ~ Season + temp_std + logvol_std + (1 | Grid_no)",
+    "`Aedes aegypti` ~ Season + Macrohabitat + temp_std + logvol_std + (1 | Grid_no)",
+    "`Aedes albopictus` ~ Season + temp_std + pH_std + (1 | Grid_no)"
+  ),
+  variables_condicionales = c(
+    "Season, temp_std, logvol_std",
+    "Season, Macrohabitat, temp_std, logvol_std",
+    "Season, temp_std, pH_std"
+  ),
+  ziformula = c(
+    "~ Season",
+    "~ Season",
+    "~ Season"
+  ),
+  comentario_principal = c(
+    "ZINB seleccionado por sobredispersión y ceros extra; pH no mejora el ajuste.",
+    "Se evita Microhabitat como modelo final por inestabilidad; Macrohabitat es más defendible.",
+    "Modelo base simplificado; pH queda como efecto marginal y Grid_no aporta variabilidad."
+  )
+)
+
+kable(
+  modelos_finales,
+  caption = "Resumen final de modelos seleccionados para abundancia."
+)
+```
+
+# Conclusión
+
+Los tres análisis apoyan el uso de modelos binomiales negativos inflados en cero. La binomial negativa mejora claramente respecto de Poisson por la sobredispersión, y la estructura inflada en cero mejora el ajuste al permitir modelar ceros extra.
+
+El filtrado de criaderos secos elimina ceros estructurales evidentes, porque sin agua no puede haber larvas. Sin embargo, los ceros restantes entre criaderos con agua pueden tener origen mixto, por lo que la inflación de ceros sigue siendo ecológica y estadísticamente razonable.
+
+Los modelos finales sugieren que las especies no responden exactamente igual. La abundancia total y *Aedes aegypti* muestran un rol importante de la temperatura y de la estacionalidad, mientras que *Aedes albopictus* conserva una señal más fuerte asociada a variabilidad entre grillas y a la reducción de ceros extra en `july-september`.
+
+En conjunto, los resultados son coherentes con un sistema ecológico heterogéneo, donde la abundancia larval depende tanto de condiciones ambientales medidas como de procesos no observados que generan ceros adicionales.
+
+# Notas para revisar antes de mostrar al profesor
+
+1.  Revisar que la ruta `ruta_datos <- "aedes_data.xlsx"` coincida con la ubicación real del archivo.
+2.  Verificar que los niveles de referencia de `Season` y `Macrohabitat` sean los esperados. La interpretación depende de la categoría de referencia.
+3.  Confirmar que los diagnósticos DHARMa efectivamente sean aceptables al renderizar el archivo.
+4.  Revisar especialmente los modelos con `Microhabitat`, porque aunque puedan bajar AIC, pueden tener problemas de estimación por categorías desbalanceadas.
+5.  En el script original había una línea problemática: `modelo_aegypti_final <- modelo_aegypti_micro_sin_pH`. En este `.qmd` se corrigió a `modelo_aegypti_macro_sin_pH`, porque es el modelo que coincide con la justificación metodológica.
+

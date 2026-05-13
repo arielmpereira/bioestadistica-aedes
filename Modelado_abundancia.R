@@ -145,7 +145,7 @@ colSums(is.na(datos_mod))
 
 
 # ====================================================
-# Paso 3: evaluar sobredispersion e inflacion de ceros
+# Paso 3: Evaluación de sobredispersion e inflacion de ceros
 # ====================================================
 
 resumen_abundancia <- data.frame(
@@ -414,8 +414,16 @@ AIC(
 
 modelo_total_final <- modelo_total_sin_pH
 
+# -------------------------------------------
+# 5.5 Diagnostico DHARMA
+#--------------------------------------------
+
+res_total_final <- simulateResiduals(modelo_total_final)
+
+plot(res_total_final)
+
 # ------------------------------------------------------------
-# 5.3 Interpretacion del modelo para la Abundancia Total
+# 5.4 Interpretacion del modelo para la Abundancia Total
 # -------------------------------------------------------------
 
 summary(modelo_total_final)
@@ -571,7 +579,7 @@ AIC(
 # ziformula = ~ Season
 #
 
-modelo_aegypti_final <- modelo_aegypti_micro_sin_pH
+modelo_aegypti_final <- modelo_aegypti_macro_sin_pH
 
 # ------------------------------------------------------------
 # 6.3 Diagnostico del modelo final con DHARMa

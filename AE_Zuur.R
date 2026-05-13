@@ -12,14 +12,93 @@ dim(datos)
 
 
 
-# ==================
-# Paso 0: filtrado e inspeccion inicial
-# ==================
-# Nos quedamos solamente con los criaderos activos (log volume >0)
-# y los datos longitudinales (Grid_type == Index)
+# ===============================================================
+# Paso 0: Filtrado de datos y seleccion de variables
+# ==============================================================
 
-seleccion = datos$`log volume` > 0 & datos$Grid_type == "Index"
-datos_clean <- datos[seleccion, ]
+summary(datos$`log volume`)
+sum(is.na(datos$`log volume`))
+
+datos |>
+  filter(`log volume` == 0) |> 
+  filter(`Final volume water(ml) without cm` != 0) |> 
+  select(`Final volume water(ml) without cm`, `log volume`)
+
+# Nos quedamos solo con las grillas tipo Index, porque son las que fueron
+# relevadas en distintas estaciones.
+
+# También excluimos `log volume` = 0 para excluir criaderos sin agua.
+# En la base, cuando el volumen de agua es 0 ml, `log volume` también aparece
+# como 0. Osea, en la base, `log volume` = 0 corresponde a criaderos secos.
+
+# Estos criaderos secos son ceros estructurales claros: sin agua no puede haber
+# larvas. Sin embargo, entre los criaderos con agua todavía pueden quedar ceros
+# por otras causas, como temperatura, pH, tipo de criadero u otras condiciones
+# no observadas.
+
+# Por eso, luego del filtrado, los ceros restantes pueden tener origen mixto,
+# lo que justifica explorar modelos inflados en cero.
+
+# ===============================
+# Selección de variables
+# ===============================
+#
+# Variables respuesta:
+# 1) Presencia / ausencia de larvas:
+# - Prevalence
+
+# 2) Abundancia de mosquitos emergidos:
+# - `Total mosquito emerged`
+# - `Aedes aegypti`
+# - `Aedes albopictus`
+
+# La variable Prevalence se modela como una respuesta binaria.
+# Las otras tres variables son conteos, por lo que se modelan como abundancias.
+
+# Variables explicativas:
+# - Season
+# - Macrohabitat
+# - Microhabitat
+# - Temperature
+# - pH
+# - log volume
+
+datos_mod <- datos %>%
+  filter(
+    Grid_type == "Index",
+    `log volume` > 0
+  )
+
+# Chequeo de variables respuesta
+summary(datos_mod$`Total mosquito emerged`)
+summary(datos_mod$`Aedes aegypti`)
+summary(datos_mod$`Aedes albopictus`)
+prop.table(table(datos_mod$Prevalence, useNA = "ifany"))
+
+# Las tres variables de abundancia presentan fuerte concentración de ceros.
+# En los tres casos, la mediana y el tercer cuartil son 0, lo que indica que
+# la mayoría de los criaderos con agua no tuvieron mosquitos emergidos.
+# También se observa una cola hacia valores altos.
+
+# Chequeo de niveles de factores
+table(datos_mod$Season)
+table(datos_mod$Macrohabitat)
+table(datos_mod$Microhabitat)
+
+# Las estaciones y macrohábitats tienen una cantidad razonable de observaciones
+# en cada nivel.
+
+# En Microhabitat hay categorías con muy pocos registros, especialmente:
+# - Tree holes: 5
+# - Plant axils: 9
+# - Discarded tires: 30
+#
+# Esto puede generar estimaciones inestables si se incluye Microhabitat con
+# todos sus niveles.
+
+# Chequeo de grillas
+length(unique(datos_mod$Grid_no))
+table(datos_mod$Grid_no)
 
 
 # ========================================
@@ -45,24 +124,7 @@ datos_clean <- datos[seleccion, ]
 # en el modelado.
 
 
-# ----------------------------
-# Selección de variables para AE
-# ----------------------------
-# Variables respuesta:
-# Prevalence
-# Total mosquito emerged
-# Aedes aegypti
-# Aedes albopictus
-#
-# Variables explicativas:
-# Season
-# Microhabitat
-# Macrohabitat
-# Temperature
-# pH
-# log volume
-
-ae <- datos_clean[, c(
+ae <- datos_mod[, c(
   "Prevalence",
   "Total mosquito emerged",
   "Aedes aegypti",

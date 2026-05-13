@@ -1,23 +1,10 @@
 ---
 title: "TP2 Bioestadística - Modelado de abundancia"
-author: "Ariel"
-format:
-  html:
-    toc: true
-    toc-depth: 3
-    code-fold: false
-    code-tools: true
-    theme: cosmo
-execute:
-  warning: false
-  message: false
-  echo: true
-editor: visual
 ---
 
 # Introducción
 
-En esta etapa se modela la **abundancia** de mosquitos Aedes. A diferencia del modelo de presencia, donde la variable respuesta era binaria, aquí trabajamos con variables de conteo.
+En esta etapa se modela la **abundancia** de mosquitos. A diferencia del modelo de presencia, donde la variable respuesta era binaria, aquí trabajamos con variables de conteo.
 
 El análisis exploratorio mostró dos características importantes:
 

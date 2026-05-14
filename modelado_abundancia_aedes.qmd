@@ -326,7 +326,7 @@ AIC(modelo_albopictus_pois, modelo_albopictus_nb, modelo_albopictus_zinb)
 ## Resumen de la comparación base
 
 | respuesta | AIC_poisson | AIC_NB | AIC_ZINB | delta_Poisson_NB | delta_NB_ZINB |
-|------------|-----------:|-----------:|-----------:|-----------:|-----------:|
+|----|---:|---:|---:|---:|---:|
 | Total mosquito emerged | 4154.14 | 1882.88 | 1836.12 | 2271.26 | 46.76 |
 | Aedes aegypti | 2727.80 | 1070.36 | 1062.86 | 1657.44 | 7.50 |
 | Aedes albopictus | 1354.90 | 611.74 | 596.06 | 743.16 | 15.68 |

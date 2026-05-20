@@ -24,42 +24,6 @@ El análisis se centra en tres respuestas de abundancia:
 
 Dado que las respuestas son conteos con alta proporción de ceros y sobredispersión, se comparan modelos Poisson, binomial negativa y binomial negativa inflada en ceros. Además, como las grillas tipo **Index** fueron relevadas en distintas estaciones, se incluye **Grid_no** como efecto aleatorio para representar la dependencia entre observaciones de una misma grilla.
 
-# Esquema general del procedimiento
-
-```{r}
-library(DiagrammeR)
-
-grViz("
-digraph flujo {
-
-  graph [layout = dot, rankdir = TB]
-
-  node [shape = box,
-        style = rounded,
-        fontsize = 12]
-
-  A [label = '1. Filtrado de datos y selección de variables\\nGrid_type = Index\\nlog volume > 0']
-  B [label = '2. Evaluación de ceros']
-  C [label = '3. Evaluación de sobredispersión\\ne inflación de ceros']
-  D [label = '4. Comparación de familias\\nPoisson / NB / ZINB\\nSelección de ZINB']
-  E [label = '5. Comparación de estructuras ZINB']
-  E1 [label = 'Modelo base']
-  E2 [label = '+ Macrohabitat']
-  E3 [label = '+ Microhabitat']
-  F [label = 'Elegir modelo candidato']
-  G [label = '6. Simplificación de covariables']
-  H [label = '7. Diagnóstico con DHARMa']
-  I [label = '8. Interpretación del modelo final']
-
-  A -> B -> C -> D -> E
-  E -> E1 -> F
-  E -> E2 -> F
-  E -> E3 -> F
-  F -> G -> H -> I
-}
-")
-```
-
 # Carga de paquetes y datos
 
 ```{r}
@@ -85,7 +49,7 @@ datos <- suppressWarnings(
 dim(datos)
 ```
 
-# 1. Filtrado de datos y seleccion de variables
+# Filtrado de datos y seleccion de variables
 
 Antes de modelar, se revisa la variable `log volume`, porque es central para decidir qué observaciones deben quedar dentro del análisis de abundancia.
 
@@ -129,7 +93,7 @@ Estos criaderos secos son ceros estructurales evidentes: sin agua no puede haber
 
 -   logvol_std
 
-    Además, se considera `Grid_no` como efecto aleatorio, porque las grillas tipo `Index` fueron relevadas en distintas estaciones. Esto permite representar la posible dependencia entre observaciones tomadas dentro de una misma grilla.
+    Además, se considera **Grid_no** como efecto aleatorio, porque las grillas tipo `Index` fueron relevadas en distintas estaciones. Esto permite representar la posible dependencia entre observaciones tomadas dentro de una misma grilla.
 
 ```{r}
 datos_mod <- datos %>%
@@ -176,31 +140,7 @@ str(datos_mod)
 sum(is.na(datos_mod))
 ```
 
-# 2. Exploración de la cantidad de observaciones de variables categóricas
-
-## Revision de observaciones por Grid_no
-
-Evaluar si todas las grillas tienen una cantidad razonable de observaciones o si existen grillas con muy pocos registros que puedan afectar la estimación del efecto aleatorio (1 \| Grid_no).
-
-```{r}
-obs_por_grilla <- datos_mod %>%
-  count(Grid_no, name = "n_obs")
-
-hist(
-  obs_por_grilla$n_obs,
-  main = "Distribución de observaciones por grilla",
-  xlab = "Cantidad de observaciones por grilla",
-  ylab = "Cantidad de grillas",
-  col = "grey80",
-  border = "black"
-)
-```
-
-La mayoría de las grillas presentó entre 10 y 40 observaciones, aunque se observaron algunas grillas con baja representación y una grilla con mayor cantidad de registros.
-
-Este patrón confirma que el diseño no es perfectamente balanceado, pero resulta compatible con el uso de modelos mixtos incorporando `Grid_no` como efecto aleatorio.
-
-## Revisión de categorias de Microhabitat
+# Revisión de categorias de Microhabitat
 
 ```{r}
 datos_mod %>%
@@ -240,15 +180,9 @@ datos_mod %>%
 
 ```
 
-# Evaluación de ceros
-
-**Ceros falsos:** Se supone que existen ceros falsos pero no son evidentes entonces no podemos eliminarlos.
-
-**Ceros estructurales:** eliminamos ceros estructurales evidentes con la condición de volumen de agua = 0
+# Evaluación de sobredispersion e inflacion de ceros
 
 Aunque filtramos ceros estructurales evidentes, podrian seguir existiendo condiciones que generen ceros estructurales. Por ejemplo: temperaturas muy altas o bajas pH extremo, etc. Como conclusion, parte de los ceros podrian ser estructurales
-
-# 3. Evaluación de sobredispersion e inflacion de ceros
 
 Antes de ajustar modelos, se evalúa la proporción de ceros, la media, la varianza y el índice de dispersión de cada respuesta.
 
@@ -298,17 +232,59 @@ La alta proporción de ceros sugiere que puede existir un proceso adicional gene
 
 # 4. Criterio de selección de modelos
 
-Se definió una estrategia simple para seleccionar el modelo de abundancia. La idea no fue probar modelos al azar hasta encontrar el menor AIC, sino avanzar por pasos. Primero se evaluó qué familia de distribución era más adecuada para los datos de conteo. Luego se compararon modelos con distintos bloques de variables explicativas. Finalmente, además del AIC, se revisaron los diagnósticos de residuos con DHARMa, porque un modelo con buen AIC no necesariamente es un modelo adecuado si deja problemas claros en los residuos.
+Se definió una estrategia simple para seleccionar el modelo de abundancia. La idea no fue probar modelos al azar hasta encontrar el menor AIC, sino avanzar por pasos.
+
+-   Primero se evaluó qué familia de distribución era más adecuada para los datos de conteo.
+
+-   Luego se compararon modelos con distintos bloques de variables explicativas.
+
+-   Finalmente, además del AIC, se revisaron los diagnósticos de residuos con DHARMa, porque un modelo con buen AIC no necesariamente es un modelo adecuado si deja problemas claros en los residuos.
+
+    ```{r}
+    library(DiagrammeR)
+
+    grViz("
+    digraph seleccion_modelos {
+
+      graph [layout = dot, rankdir = TB]
+
+      node [
+        shape = rectangle,
+        style = 'rounded,filled',
+        fillcolor = '#F2F2F2',
+        color = '#4D4D4D',
+        fontname = Helvetica,
+        fontsize = 12
+      ]
+
+      edge [
+        color = '#4D4D4D',
+        arrowsize = 0.8
+      ]
+
+      A [label = 'Datos de abundancia']
+      B [label = 'Comparación de familias\\nPoisson / NB / ZINB']
+      C [label = 'Selección de ZINB']
+      D [label = 'Comparación de modelos\\nbase / macro / micro / macro + micro']
+      E [label = 'Comparación por AIC']
+      F [label = 'Diagnóstico con DHARMa']
+      G [label = 'Selección del modelo final']
+      H [label = 'Interpretación']
+
+      A -> B -> C -> D -> E -> F -> G -> H
+    }
+    ")
+    ```
 
 ## Etapa 1 — Elegir la familia adecuada para el conteo
 
 Se compararon modelos con los mismos predictores, cambiando solo la familia: Poisson, binomial negativa o ZINB. Esto permite evaluar qué tipo de modelo se ajusta mejor a la variable respuesta sin mezclar esta desicion con cambios en las covariables del modelo.
 
-**La parte condicional del modelo incluyó la siguientes variables:**
+### **La parte condicional del modelo incluyó la siguientes variables:**
 
 respuesta \~ Season + temp_std + pH_std + logvol_std + (1 \| Grid_no)
 
-**En los modelos ZINB se agrega:**
+### **En los modelos ZINB se agrega:**
 
 ziformula = \~ Season
 
@@ -391,15 +367,11 @@ AIC(modelo_albopictus_pois, modelo_albopictus_nb, modelo_albopictus_zinb)
 
 ## Resumen de la comparación base
 
-+------------------------+-------------+----------+----------+------------------+---------------+
-| respuesta              | AIC_poisson | AIC_NB   | AIC_ZINB | delta_Poisson_NB | delta_NB_ZINB |
-+========================+============:+=========:+=========:+=================:+==============:+
-| Total mosquito emerged | 4154.14     | 1882.88  | 1836.12  | 2271.26          | 46.76         |
-+------------------------+-------------+----------+----------+------------------+---------------+
-| Aedes aegypti          | 2727.80     | 1070.36  | 1062.86  | 1657.44          | 7.50          |
-+------------------------+-------------+----------+----------+------------------+---------------+
-| Aedes albopictus       | 1354.90     | 611.74   | 596.06   | 743.16           | 15.68         |
-+------------------------+-------------+----------+----------+------------------+---------------+
+| respuesta | AIC_poisson | AIC_NB | AIC_ZINB | delta_Poisson_NB | delta_NB_ZINB |
+|------------|-----------:|-----------:|-----------:|-----------:|-----------:|
+| Total mosquito emerged | 4154.14 | 1882.88 | 1836.12 | 2271.26 | 46.76 |
+| Aedes aegypti | 2727.80 | 1070.36 | 1062.86 | 1657.44 | 7.50 |
+| Aedes albopictus | 1354.90 | 611.74 | 596.06 | 743.16 | 15.68 |
 
 Los modelos ZINB presentan el menor AIC en las tres respuestas. La mejora respecto del modelo NB es clara para la abundancia total y para Aedes albopictus, y más moderada para Aedes aegypti.
 
@@ -413,7 +385,7 @@ Primero se ajustó un modelo ambiental, que incluye estación, temperatura, pH y
 
 En todos los casos se mantuvo la misma estructura de inflación de ceros (ziformula = \~Season) y el mismo efecto aleatorio de grilla (1 \| Grid_no).
 
-## 5. Comparación de modelos ZINB para la Abundancia Total
+## Comparación de modelos ZINB para la Abundancia Total
 
 ```{r}
 modelo_total_zinb_base <- glmmTMB(
@@ -455,17 +427,12 @@ AIC(
 
 En la comparación por AIC, el modelo base ambiental presentó el menor valor. Sin embargo, al revisar los diagnósticos con DHARMa, este modelo mostró problemas de ajuste. Por este motivo, no se tomó el AIC como único criterio de selección.
 
-+---------------------------------------------+---------------+-------------------------------------------------------------------------------------------------------------------+
-| Modelo                                      | AIC           | Diagnóstico DHARMa                                                                                                |
-+=============================================+==============:+===================================================================================================================+
-| Base ambiental                              | 1836.120      | Presenta problema en el test de outliers.                                                                         |
-+---------------------------------------------+---------------+-------------------------------------------------------------------------------------------------------------------+
-| Ambiental + Macrohabitat                    | 1839.392      | No presenta problemas de uniformidad, dispersión ni outliers, pero muestra desviaciones en residuos vs predichos. |
-+---------------------------------------------+---------------+-------------------------------------------------------------------------------------------------------------------+
-| Ambiental + Microhabitat_rec                | 1839.713      | Diagnóstico adecuado, sin problemas importantes detectados.                                                       |
-+---------------------------------------------+---------------+-------------------------------------------------------------------------------------------------------------------+
-| Ambiental + Macrohabitat + Microhabitat_rec | 1844.916      | Diagnóstico adecuado, sin problemas importantes detectados, pero con mayor complejidad.                           |
-+---------------------------------------------+---------------+-------------------------------------------------------------------------------------------------------------------+
+| Modelo | AIC | Diagnóstico DHARMa |
+|---------------|--------------:|------------------------------------------|
+| Base ambiental | 1836.120 | Presenta problema en el test de outliers. |
+| Ambiental + Macrohabitat | 1839.392 | No presenta problemas de uniformidad, dispersión ni outliers, pero muestra desviaciones en residuos. |
+| Ambiental + Microhabitat_rec | 1839.713 | Diagnóstico adecuado, sin problemas importantes detectados. |
+| Ambiental + Macrohabitat + Microhabitat_rec | 1844.916 | Diagnóstico adecuado, sin problemas importantes detectados, pero con mayor complejidad. |
 
 Se evaluaron entonces los modelos alternativos. El modelo que incorporó `Microhabitat_rec` presentó un AIC levemente mayor, pero mostró un comportamiento más adecuado de los residuos simulados. Además, la inclusión del microhábitat tiene sentido biológico, ya que el tipo de criadero puede influir en la producción de larvas.
 
@@ -502,6 +469,8 @@ summary(modelo_total_final)
 ```
 
 La salida se interpreta en dos partes: la parte condicional, que modela la abundancia esperada de mosquitos emergidos, y la parte de inflación de ceros, que modela la probabilidad de ceros extra.
+
+emmeans
 
 ### Parte condicional: abundancia esperada
 
@@ -596,17 +565,12 @@ AIC(
 
 Luego de comparar los modelos por AIC, se revisaron también los diagnósticos con DHARMa. Esto es importante porque un modelo puede tener menor AIC, pero igualmente presentar problemas en los residuos. Por eso, el modelo final no se eligió solo por AIC, sino considerando también el diagnóstico y la interpretación biológica.
 
-+---------------------------------------------+---------------------------+---------------------------------------------------------------------------------------+
-| Modelo                                      | AIC                       | Diagnóstico DHARMa                                                                    |
-+=============================================+==========================:+=======================================================================================+
-| Base ambiental                              | 1062.858                  | Presenta problema en el test de outliers.                                             |
-+---------------------------------------------+---------------------------+---------------------------------------------------------------------------------------+
-| Ambiental + Macrohabitat                    | 1061.501                  | Diagnóstico adecuado, sin problemas importantes detectados.                           |
-+---------------------------------------------+---------------------------+---------------------------------------------------------------------------------------+
-| Ambiental + Microhabitat_rec                | 1055.011                  | Diagnóstico adecuado, sin problemas importantes detectados.                           |
-+---------------------------------------------+---------------------------+---------------------------------------------------------------------------------------+
-| Ambiental + Macrohabitat + Microhabitat_rec | 1047.187                  | Diagnóstico adecuado. La dispersión queda cerca del límite, pero no es significativa. |
-+---------------------------------------------+---------------------------+---------------------------------------------------------------------------------------+
+| Modelo | AIC | Diagnóstico DHARMa |
+|-------------------|----------------:|------------------------------------|
+| Base ambiental | 1062.858 | Presenta problema en el test de outliers. |
+| Ambiental + Macrohabitat | 1061.501 | Diagnóstico adecuado, sin problemas importantes detectados. |
+| Ambiental + Microhabitat_rec | 1055.011 | Diagnóstico adecuado, sin problemas importantes detectados. |
+| Ambiental + Macrohabitat + Microhabitat_rec | 1047.187 | Diagnóstico adecuado. La dispersión queda cerca del límite, pero no es significativa. |
 
 Para la abundancia de \*Aedes aegypti\*, el modelo con menor AIC fue el que incluyó tanto \`Macrohabitat\` como \`Microhabitat_rec\`. Además, el diagnóstico con DHARMa no mostró problemas importantes: el test de uniformidad no fue significativo, no se detectaron outliers relevantes y el test de dispersión tampoco fue significativo, aunque quedó relativamente cerca del límite.
 
@@ -745,17 +709,12 @@ AIC(
 
 Luego de comparar los modelos por AIC, también se revisaron los diagnósticos con DHARMa. Esta revisión es importante porque el menor AIC no alcanza por sí solo para seleccionar el modelo si los residuos muestran problemas claros.
 
-+---------------------------------------------+---------------------------+-------------------------------------------------------------------------------------------------------------------------+
-| Modelo                                      | AIC                       | Diagnóstico DHARMa                                                                                                      |
-+=============================================+==========================:+=========================================================================================================================+
-| Base ambiental                              | 596.060                   | Diagnóstico aceptable. No presenta problemas significativos, aunque la dispersión queda relativamente cerca del límite. |
-+---------------------------------------------+---------------------------+-------------------------------------------------------------------------------------------------------------------------+
-| Ambiental + Macrohabitat                    | 598.905                   | Presenta desviaciones en residuos vs predichos.                                                                         |
-+---------------------------------------------+---------------------------+-------------------------------------------------------------------------------------------------------------------------+
-| Ambiental + Microhabitat_rec                | 599.049                   | Presenta problema de dispersión.                                                                                        |
-+---------------------------------------------+---------------------------+-------------------------------------------------------------------------------------------------------------------------+
-| Ambiental + Macrohabitat + Microhabitat_rec | 599.960                   | Diagnóstico aceptable, pero con mayor AIC y mayor complejidad.                                                          |
-+---------------------------------------------+---------------------------+-------------------------------------------------------------------------------------------------------------------------+
+| Modelo | AIC | Diagnóstico DHARMa |
+|----------------|---------------:|-----------------------------------------|
+| Base ambiental | 596.060 | Diagnóstico aceptable. No presenta problemas significativos, aunque la dispersión queda relativamente cerca del límite. |
+| Ambiental + Macrohabitat | 598.905 | Presenta desviaciones en residuos vs predichos. |
+| Ambiental + Microhabitat_rec | 599.049 | Presenta problema de dispersión. |
+| Ambiental + Macrohabitat + Microhabitat_rec | 599.960 | Diagnóstico aceptable, pero con mayor AIC y mayor complejidad. |
 
 Para la abundancia de *Aedes albopictus*, el modelo con menor AIC fue el modelo base ambiental. Este modelo incluyó `Season`, `temp_std`, `pH_std`, `logvol_std` y el efecto aleatorio de `Grid_no`.
 
@@ -840,4 +799,4 @@ Esto sugiere que, para *Aedes albopictus*, sí queda variabilidad entre grillas 
 
 ------------------------------------------------------------------------
 
-# 8. Conclusión
+# 

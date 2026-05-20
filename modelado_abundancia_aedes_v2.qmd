@@ -1,0 +1,626 @@
+---
+title: "Modelado de abundancia de mosquitos Aedes"
+---
+
+```{r setup}
+#| include: false
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+# Introducción
+
+Este archivo documenta el proceso de modelado de abundancia de mosquitos en criaderos urbanos, a partir de datos del estudio sobre ecología larval de *Aedes* en Bengaluru, India.
+
+El análisis se centra en tres respuestas de abundancia:
+
+-   `Total mosquito emerged`
+-   `Aedes aegypti`
+-   `Aedes albopictus`
+
+Dado que las respuestas son conteos con alta proporción de ceros y sobredispersión, se comparan modelos Poisson, binomial negativa y binomial negativa inflada en ceros. Además, como las grillas tipo **Index** fueron relevadas en distintas estaciones, se incluye **Grid_no** como efecto aleatorio para representar la dependencia entre observaciones de una misma grilla.
+
+# Esquema general del procedimiento
+
+Los modelos se organizan en dos bloques biológicamente informativo, siguiendo el marco conceptual propuesto por Zuur & Ieno (2016):
+
+-   **Modelo temporal–intrínseco**: captura cuándo ocurre la producción de mosquitos (estación) y qué condiciones hay dentro del hábitat de cría (temperatura, pH, volumen, tipo de criadero).
+-   **Modelo de contexto**: captura dónde ocurre, es decir, el vecindario urbano (macrohábitat) y el tipo de criadero.
+
+```{r}
+library(DiagrammeR)
+
+grViz("
+digraph flujo {
+
+  graph [layout = dot, rankdir = TB]
+
+  node [shape = box,
+        style = rounded,
+        fontsize = 12]
+
+  A [label = '1. Filtrado de datos y selección de variables\\nGrid_type = Index / log volume > 0']
+  B [label = '2. Evaluación de observaciones por grilla\\nUmbral mínimo de observaciones']
+  C [label = '3. Operacionalización de Microhabitat\\nMicrohabitat_bio (3 categorías biológicas)']
+  D [label = '4. Evaluación de ceros y sobredispersión']
+  E [label = '5. Comparación de familias\\nPoisson / NB / ZINB']
+  F [label = '6. Comparación de modelos biológicos']
+  F1 [label = 'Modelo temporal-intrínseco\\nSeason + cond. dentro + tipo criadero']
+  F2 [label = 'Modelo de contexto\\nMacrohábitat + tipo criadero']
+  F3 [label = 'Modelo completo']
+  G [label = 'Selección por AIC + diagnóstico DHARMa']
+  H [label = '7. Interpretación del modelo final']
+
+  A -> B -> C -> D -> E -> F
+  F -> F1 -> G
+  F -> F2 -> G
+  F -> F3 -> G
+  G -> H
+}
+")
+```
+
+# Carga de paquetes y datos
+
+```{r}
+library(readxl)
+library(dplyr)
+library(tibble)
+library(knitr)
+library(lme4)
+library(glmmTMB)
+library(DHARMa)
+library(ggplot2)
+```
+
+```{r}
+ruta_datos <- "aedes_data.xlsx"
+
+datos <- suppressWarnings(
+  read_excel(ruta_datos)
+)
+
+dim(datos)
+```
+
+# 1. Filtrado de datos y seleccion de variables
+
+```{r}
+summary(datos$`log volume`)
+sum(is.na(datos$`log volume`))
+
+datos |>
+  filter(`log volume` == 0) |>
+  filter(`Final volume water(ml) without cm` != 0) |>
+  select(`Final volume water(ml) without cm`, `log volume`)
+```
+
+```{r}
+datos_mod <- datos %>%
+  filter(
+    Grid_type == "Index",
+    `log volume` > 0
+  ) %>%
+  select(
+    Prevalence,
+    `Total mosquito emerged`,
+    `Aedes aegypti`,
+    `Aedes albopictus`,
+    Season,
+    Temperature,
+    pH,
+    `log volume`,
+    Macrohabitat,
+    Microhabitat,
+    Grid_no
+  ) %>%
+  mutate(
+    Season = as.factor(Season),
+    Macrohabitat = as.factor(Macrohabitat),
+    Microhabitat = as.factor(Microhabitat),
+    Grid_no = as.factor(Grid_no)
+  )
+
+dim(datos_mod)
+```
+
+```{r}
+datos_mod <- datos_mod %>%
+  mutate(
+    temp_std = as.numeric(scale(Temperature)),
+    pH_std = as.numeric(scale(pH)),
+    logvol_std = as.numeric(scale(`log volume`))
+  )
+
+dim(datos_mod)
+str(datos_mod)
+sum(is.na(datos_mod))
+```
+
+# 2. Evaluación y filtrado de observaciones por grilla
+
+## Cuantificación de observaciones por grilla
+
+Para que el efecto aleatorio `(1 | Grid_no)` pueda estimarse de forma estable, cada grilla debe aportar un número mínimo de observaciones. Con muy pocas observaciones por grilla, la varianza del efecto aleatorio no es identificable y el modelo puede producir estimaciones inestables o degenerar.
+
+```{r}
+obs_por_grilla <- datos_mod %>%
+  count(Grid_no, name = "n_obs") %>%
+  arrange(n_obs)
+
+# Distribución general
+summary(obs_por_grilla$n_obs)
+
+# ¿Cuántas grillas quedan por debajo de distintos umbrales?
+cat("Grillas con menos de 5 observaciones:  ", sum(obs_por_grilla$n_obs < 5),  "\n")
+cat("Grillas con menos de 10 observaciones: ", sum(obs_por_grilla$n_obs < 10), "\n")
+cat("Grillas con menos de 3 observaciones:  ", sum(obs_por_grilla$n_obs < 3),  "\n")
+
+# Listado de las grillas con menos de 5 observaciones
+obs_por_grilla %>% filter(n_obs < 5)
+```
+
+```{r}
+hist(
+  obs_por_grilla$n_obs,
+  main = "Distribución de observaciones por grilla",
+  xlab = "Cantidad de observaciones por grilla",
+  ylab = "Cantidad de grillas",
+  col = "grey80",
+  border = "black"
+)
+abline(v = 5, col = "red", lty = 2, lwd = 2)
+legend("topright", legend = "Umbral = 5 obs.", col = "red", lty = 2, lwd = 2)
+```
+
+## Decisión sobre el filtrado de grillas
+
+Se aplica un umbral mínimo de **5 observaciones por grilla**. Este criterio es conservador: en modelos mixtos, se recomienda que cada nivel del efecto aleatorio aporte al menos entre 5 y 10 observaciones para que la varianza grupal sea estimable sin colapsar a cero o generar advertencias de singularidad (Bolker et al. 2009; Zuur & Ieno 2016, Paso 4).
+
+Grillas con menos de 5 observaciones aportan información insuficiente para el efecto aleatorio y su inclusión podría sesgar la estimación de la varianza grupal. Se opta por removerlas antes de ajustar los modelos.
+
+```{r}
+grillas_validas <- obs_por_grilla %>%
+  filter(n_obs >= 5) %>%
+  pull(Grid_no)
+
+n_antes <- nrow(datos_mod)
+datos_mod <- datos_mod %>%
+  filter(Grid_no %in% grillas_validas)
+n_despues <- nrow(datos_mod)
+
+cat("Observaciones antes del filtro: ", n_antes,  "\n")
+cat("Observaciones después del filtro:", n_despues, "\n")
+cat("Observaciones removidas:         ", n_antes - n_despues, "\n")
+cat("Grillas removidas:               ", length(levels(droplevels(datos_mod$Grid_no) |> droplevels()) |> setdiff(grillas_validas |> as.character(), x = levels(datos_mod$Grid_no))), "\n")
+cat("Grillas que quedan:              ", length(grillas_validas), "\n")
+
+# Actualizar niveles del factor
+datos_mod$Grid_no <- droplevels(datos_mod$Grid_no)
+```
+
+# 3. Operacionalización de Microhabitat
+
+## Revisión de frecuencias por categoría
+
+```{r}
+datos_mod %>%
+  group_by(Microhabitat) %>%
+  summarise(
+    n_obs = n(),
+    total_mosquitos = sum(`Total mosquito emerged`, na.rm = TRUE),
+    ceros = sum(`Total mosquito emerged` == 0, na.rm = TRUE),
+    prop_ceros = round(mean(`Total mosquito emerged` == 0, na.rm = TRUE), 2)
+  ) %>%
+  arrange(n_obs)
+```
+
+## Reagrupamiento biológico: Microhabitat_bio
+
+La variable Microhabitat original tiene categorías con muy pocas observaciones. Además, las categorías originales no están organizadas en función de su rol biológico en la producción de larvas.
+
+Se propone una nueva variable **Microhabitat_bio** con tres categorías biológicamente informativas:
+
+| Categoría | Microhábitats incluidos (n) | Racionalidad biológica |
+|-----------|----------------------------|------------------------|
+| `Natural` (n=14) | Tree holes (5), Plant axils (9) | Sitios de acumulación natural de agua, independientes del manejo humano. El agua entra por lluvia o por la planta. Características físicas más variables y menos predecibles que en un contenedor artificial. Abundancia media condicional: 2.5 mosquitos |
+| `Grinding_stones` (n=70) | Grinding stones (70) | Contenedores de piedra, tradicionales, permanentes, de gran volumen. Culturalmente específicos del Sur de Asia — suelen estar en zonas de preparación de alimentos, lo que puede enriquecer el agua. Material pétreo con propiedades térmicas distintas. Se mantienen como categoría propia porque en los modelos anteriores mostraron la señal más fuerte de todas las categorías de microhábitat. Abundancia media condicional: 6.6 mosquitos |
+| `Artificial` (n=973) | Discarded containers (435), Pots (209), Storage containers (168), Coconut Shells (82), Stagnant water (49), Discarded tires (30) | Contenedores manufacturados o sitios de acumulación de origen antrópico, bajo gestión activa o pasiva por parte de los habitantes. Es el grupo de referencia por ser el más numeroso y representar la condición de base del entorno urbano. Abundancia media condicional: 5.7 mosquitos |
+
+Esta discretización reduce el número de parámetros, mantiene suficiente representación en cada categoría y refleja una distinción ecológica real entre hábitats naturales, tradicionales y artificiales urbanos.
+
+```{r}
+datos_mod <- datos_mod %>%
+  mutate(
+    Microhabitat_bio = case_when(
+      Microhabitat %in% c("Tree holes", "Plant axils") ~ "Natural",
+      Microhabitat %in% c("Grinding stones")            ~ "Grinding_stones",
+      TRUE                                              ~ "Artificial"
+    ),
+    Microhabitat_bio = factor(Microhabitat_bio,
+                              levels = c("Artificial", "Grinding_stones", "Natural"))
+  )
+
+# Verificación de frecuencias
+datos_mod %>%
+  group_by(Microhabitat_bio) %>%
+  summarise(
+    n_obs = n(),
+    total_mosquitos = sum(`Total mosquito emerged`, na.rm = TRUE),
+    prop_ceros = round(mean(`Total mosquito emerged` == 0, na.rm = TRUE), 2)
+  )
+```
+
+El nivel de referencia es `Artificial`, que representa el grupo de mayor tamaño y la condición de base del entorno urbano. Los efectos de `Grinding_stones` y `Natural` se interpretan en comparación con este grupo.
+
+# Evaluación de ceros
+
+**Ceros falsos:** se supone que existen pero no son evidentes, por lo que no pueden eliminarse.
+
+**Ceros estructurales:** se eliminaron los evidentes (log volume = 0).
+
+Pueden seguir existiendo condiciones que generen ceros estructurales (temperaturas extremas, pH muy alto o bajo, estacionalidad, tipo de criadero). Por tanto, parte de los ceros restantes podrían ser estructurales, lo que justifica explorar modelos inflados en cero.
+
+# 3. Evaluación de sobredispersión e inflación de ceros
+
+```{r}
+resumen_abundancia <- data.frame(
+  respuesta = c("Total mosquito emerged", "Aedes aegypti","Aedes albopictus"),
+
+  n = c(
+    length(datos_mod$`Total mosquito emerged`),
+    length(datos_mod$`Aedes aegypti`),
+    length(datos_mod$`Aedes albopictus`)
+  ),
+
+  proporcion_ceros = c(
+    mean(datos_mod$`Total mosquito emerged` == 0, na.rm = TRUE),
+    mean(datos_mod$`Aedes aegypti` == 0, na.rm = TRUE),
+    mean(datos_mod$`Aedes albopictus` == 0, na.rm = TRUE)
+  ),
+
+  media = c(
+    mean(datos_mod$`Total mosquito emerged`, na.rm = TRUE),
+    mean(datos_mod$`Aedes aegypti`, na.rm = TRUE),
+    mean(datos_mod$`Aedes albopictus`, na.rm = TRUE)
+  ),
+
+  varianza = c(
+    var(datos_mod$`Total mosquito emerged`, na.rm = TRUE),
+    var(datos_mod$`Aedes aegypti`, na.rm = TRUE),
+    var(datos_mod$`Aedes albopictus`, na.rm = TRUE)
+  )
+)
+
+resumen_abundancia$indice_dispersion <- resumen_abundancia$varianza / resumen_abundancia$media
+
+resumen_abundancia
+```
+
+Las tres respuestas presentan alta proporción de ceros e índice de dispersión muy superior a 1, lo que descarta Poisson simple y justifica comparar NB y ZINB.
+
+# 4. Criterio de selección de modelos
+
+La estrategia de selección sigue dos etapas sucesivas, separando la elección de familia de distribución de la elección de estructura de covariables.
+
+## Etapa 1 — Familia de distribución
+
+Se comparan tres familias con la misma estructura base de covariables:
+
+-   Poisson
+-   Binomial negativa (NB)
+-   Binomial negativa inflada en ceros (ZINB)
+
+La parte condicional base es:
+
+`respuesta ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no)`
+
+En los modelos ZINB: `ziformula = ~ Season`
+
+## Etapa 2 — Modelos biológicamente informativo
+
+Una vez elegida la familia, se comparan tres modelos con distinto contenido biológico:
+
+| Modelo | Fórmula | Pregunta biológica |
+|--------|---------|-------------------|
+| **Temporal-intrínseco** | `Season + Microhabitat_bio + temp_std + pH_std + logvol_std` | ¿Cuándo y bajo qué condiciones físicas dentro del criadero se produce más? |
+| **De contexto** | `Macrohabitat + Microhabitat_bio` | ¿Qué características del vecindario y del tipo de criadero predicen la abundancia? |
+| **Completo** | Todos los predictores anteriores | Modelo combinado para evaluar si la información se complementa |
+
+En todos los modelos: `+ (1 | Grid_no)` y `ziformula = ~ Season`.
+
+## Abundancia total
+
+### Etapa 1: comparación de familias
+
+```{r}
+modelo_total_pois <- glmmTMB(
+  `Total mosquito emerged` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  family = poisson,
+  data = datos_mod
+)
+
+modelo_total_nb <- glmmTMB(
+  `Total mosquito emerged` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_total_zinb <- glmmTMB(
+  `Total mosquito emerged` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+AIC(modelo_total_pois, modelo_total_nb, modelo_total_zinb)
+```
+
+### Etapa 2: comparación de modelos biológicos (ZINB)
+
+```{r}
+# Modelo temporal-intrínseco:
+# captura variación estacional + condiciones dentro del criadero + tipo de criadero
+modelo_total_temporal <- glmmTMB(
+  `Total mosquito emerged` ~ Season + Microhabitat_bio + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+# Modelo de contexto:
+# captura características del vecindario (macrohábitat) + tipo de criadero
+modelo_total_contexto <- glmmTMB(
+  `Total mosquito emerged` ~ Macrohabitat + Microhabitat_bio + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+# Modelo completo: combina información temporal-intrínseca y de contexto
+modelo_total_completo <- glmmTMB(
+  `Total mosquito emerged` ~ Season + Macrohabitat + Microhabitat_bio + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+# Modelo base (referencia)
+modelo_total_base <- glmmTMB(
+  `Total mosquito emerged` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+AIC(
+  modelo_total_base,
+  modelo_total_temporal,
+  modelo_total_contexto,
+  modelo_total_completo
+)
+```
+
+Se elige el modelo con menor AIC que además presente un diagnóstico DHARMa aceptable. La interpretación biológica de los coeficientes se considera un criterio adicional: se prefiere un modelo cuyos efectos sean interpretables en el contexto del estudio.
+
+### Diagnóstico DHARMa del modelo seleccionado
+
+```{r}
+# Reemplazar por el modelo que resultó ganador en el AIC anterior
+modelo_total_final <- modelo_total_temporal
+
+res_total_final <- simulateResiduals(modelo_total_final)
+plot(res_total_final)
+```
+
+### Summary del modelo final
+
+```{r}
+summary(modelo_total_final)
+```
+
+### Interpretación
+
+El modelo seleccionado para la abundancia total incluye las condiciones temporales (estación) y las características dentro del hábitat de cría (temperatura, pH, volumen y tipo de criadero).
+
+-   **Parte condicional**: `feb-march` presentó el mayor efecto positivo sobre la abundancia esperada, lo que indica una producción larval más intensa en esa estación. La temperatura estandarizada tuvo un efecto negativo significativo: mayor temperatura se asocia con menor abundancia esperada. El tipo de criadero `Grinding_stones` mostró una tendencia positiva respecto a los contenedores artificiales comunes.
+
+-   **Parte de inflación de ceros**: `october-december` presentó un efecto positivo y significativo, lo que indica que en esa estación aumentan las chances de ceros extra, es decir, que los criaderos presenten ausencia total de larvas independientemente de las condiciones.
+
+------------------------------------------------------------------------
+
+# 5. Modelo para abundancia de *Aedes aegypti*
+
+Para *Aedes aegypti* se sigue el mismo criterio de dos etapas.
+
+### Etapa 1: comparación de familias
+
+```{r}
+modelo_aegypti_pois <- glmmTMB(
+  `Aedes aegypti` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  family = poisson,
+  data = datos_mod
+)
+
+modelo_aegypti_nb <- glmmTMB(
+  `Aedes aegypti` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_aegypti_zinb <- glmmTMB(
+  `Aedes aegypti` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+AIC(modelo_aegypti_pois, modelo_aegypti_nb, modelo_aegypti_zinb)
+```
+
+### Etapa 2: comparación de modelos biológicos (ZINB)
+
+```{r}
+modelo_aegypti_temporal <- glmmTMB(
+  `Aedes aegypti` ~ Season + Microhabitat_bio + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_aegypti_contexto <- glmmTMB(
+  `Aedes aegypti` ~ Macrohabitat + Microhabitat_bio + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_aegypti_completo <- glmmTMB(
+  `Aedes aegypti` ~ Season + Macrohabitat + Microhabitat_bio + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_aegypti_base <- glmmTMB(
+  `Aedes aegypti` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+AIC(
+  modelo_aegypti_base,
+  modelo_aegypti_temporal,
+  modelo_aegypti_contexto,
+  modelo_aegypti_completo
+)
+```
+
+### Diagnóstico DHARMa del modelo seleccionado
+
+```{r}
+modelo_aegypti_final <- modelo_aegypti_temporal
+
+res_aegypti_final <- simulateResiduals(modelo_aegypti_final)
+plot(res_aegypti_final)
+```
+
+### Summary del modelo final
+
+```{r}
+formula(modelo_aegypti_final)
+AIC(modelo_aegypti_final)
+summary(modelo_aegypti_final)
+```
+
+### Interpretación
+
+El modelo seleccionado para *Aedes aegypti* captura cómo la producción larval varía en función de la estación del año y de las condiciones dentro del criadero. Los contenedores tipo `Grinding_stones` se asociaron con mayor abundancia esperada respecto a los contenedores artificiales comunes, lo que sugiere que este tipo de criadero ofrece condiciones particulares favorables para *Aedes aegypti* (volumen grande, material pétreo, exposición al sol controlada). La temperatura presentó un efecto negativo, consistente con la biología de la especie en climas tropicales cálidos.
+
+------------------------------------------------------------------------
+
+# 6. Modelo para abundancia de *Aedes albopictus*
+
+Para *Aedes albopictus* se sigue el mismo criterio.
+
+### Etapa 1: comparación de familias
+
+```{r}
+modelo_albopictus_pois <- glmmTMB(
+  `Aedes albopictus` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  family = poisson,
+  data = datos_mod
+)
+
+modelo_albopictus_nb <- glmmTMB(
+  `Aedes albopictus` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_albopictus_zinb <- glmmTMB(
+  `Aedes albopictus` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+AIC(modelo_albopictus_pois, modelo_albopictus_nb, modelo_albopictus_zinb)
+```
+
+### Etapa 2: comparación de modelos biológicos (ZINB)
+
+```{r}
+modelo_albopictus_temporal <- glmmTMB(
+  `Aedes albopictus` ~ Season + Microhabitat_bio + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_albopictus_contexto <- glmmTMB(
+  `Aedes albopictus` ~ Macrohabitat + Microhabitat_bio + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_albopictus_completo <- glmmTMB(
+  `Aedes albopictus` ~ Season + Macrohabitat + Microhabitat_bio + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_albopictus_base <- glmmTMB(
+  `Aedes albopictus` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+AIC(
+  modelo_albopictus_base,
+  modelo_albopictus_temporal,
+  modelo_albopictus_contexto,
+  modelo_albopictus_completo
+)
+```
+
+### Diagnóstico DHARMa del modelo seleccionado
+
+```{r}
+modelo_albopictus_final <- modelo_albopictus_base
+
+res_albopictus_final <- simulateResiduals(modelo_albopictus_final)
+plot(res_albopictus_final)
+```
+
+### Summary del modelo final
+
+```{r}
+summary(modelo_albopictus_final)
+```
+
+### Interpretación
+
+A diferencia de *Aedes aegypti*, la abundancia de *Aedes albopictus* parece estar mejor explicada por las condiciones ambientales generales que por el tipo de criadero. La temperatura y el pH presentaron efectos positivos significativos sobre la abundancia esperada. La varianza del efecto aleatorio de `Grid_no` fue apreciable, lo que sugiere que para esta especie existe variabilidad entre grillas no capturada completamente por los predictores fijos.
+
+En la parte de inflación de ceros, `july-september` se asoció con menor probabilidad de ceros extra, indicando que en esa estación los criaderos con agua tienden a tener larvas con mayor frecuencia.
+
+------------------------------------------------------------------------
+
+# 7. Conclusión
+
+El modelado de abundancia confirmó las características propias de los conteos ecológicos urbanos: exceso de ceros, sobredispersión y estructura agrupada. En todos los modelos se incluyó `Grid_no` como efecto aleatorio para respetar la dependencia entre observaciones de una misma grilla.
+
+La operacionalización de Microhabitat en tres categorías biológicas (`Artificial`, `Grinding_stones`, `Natural`) permitió incorporar el tipo de criadero sin sobreparameterizar el modelo. Los contenedores tipo `Grinding_stones` mostraron consistentemente mayor producción larval, especialmente para *Aedes aegypti*, lo que constituye un resultado de interés para el control vectorial.
+
+El esquema de modelos biológicos —temporal-intrínseco y de contexto— permite responder preguntas distintas sobre la ecología larval de *Aedes*: el primero describe cuándo y bajo qué condiciones se produce la abundancia, y el segundo describe en qué tipo de vecindario y criadero ocurre.
+
+Las dos especies respondieron de forma diferente a los predictores analizados, lo que confirma la pertinencia de modelarlas por separado.

@@ -368,7 +368,7 @@ AIC(modelo_albopictus_pois, modelo_albopictus_nb, modelo_albopictus_zinb)
 ## Resumen de la comparación base
 
 | respuesta | AIC_poisson | AIC_NB | AIC_ZINB | delta_Poisson_NB | delta_NB_ZINB |
-|------------|-----------:|-----------:|-----------:|-----------:|-----------:|
+|----|---:|---:|---:|---:|---:|
 | Total mosquito emerged | 4154.14 | 1882.88 | 1836.12 | 2271.26 | 46.76 |
 | Aedes aegypti | 2727.80 | 1070.36 | 1062.86 | 1657.44 | 7.50 |
 | Aedes albopictus | 1354.90 | 611.74 | 596.06 | 743.16 | 15.68 |
@@ -428,7 +428,7 @@ AIC(
 En la comparación por AIC, el modelo base ambiental presentó el menor valor. Sin embargo, al revisar los diagnósticos con DHARMa, este modelo mostró problemas de ajuste. Por este motivo, no se tomó el AIC como único criterio de selección.
 
 | Modelo | AIC | Diagnóstico DHARMa |
-|---------------|--------------:|------------------------------------------|
+|----|---:|----|
 | Base ambiental | 1836.120 | Presenta problema en el test de outliers. |
 | Ambiental + Macrohabitat | 1839.392 | No presenta problemas de uniformidad, dispersión ni outliers, pero muestra desviaciones en residuos. |
 | Ambiental + Microhabitat_rec | 1839.713 | Diagnóstico adecuado, sin problemas importantes detectados. |
@@ -566,7 +566,7 @@ AIC(
 Luego de comparar los modelos por AIC, se revisaron también los diagnósticos con DHARMa. Esto es importante porque un modelo puede tener menor AIC, pero igualmente presentar problemas en los residuos. Por eso, el modelo final no se eligió solo por AIC, sino considerando también el diagnóstico y la interpretación biológica.
 
 | Modelo | AIC | Diagnóstico DHARMa |
-|-------------------|----------------:|------------------------------------|
+|----|---:|----|
 | Base ambiental | 1062.858 | Presenta problema en el test de outliers. |
 | Ambiental + Macrohabitat | 1061.501 | Diagnóstico adecuado, sin problemas importantes detectados. |
 | Ambiental + Microhabitat_rec | 1055.011 | Diagnóstico adecuado, sin problemas importantes detectados. |
@@ -710,7 +710,7 @@ AIC(
 Luego de comparar los modelos por AIC, también se revisaron los diagnósticos con DHARMa. Esta revisión es importante porque el menor AIC no alcanza por sí solo para seleccionar el modelo si los residuos muestran problemas claros.
 
 | Modelo | AIC | Diagnóstico DHARMa |
-|----------------|---------------:|-----------------------------------------|
+|----|---:|----|
 | Base ambiental | 596.060 | Diagnóstico aceptable. No presenta problemas significativos, aunque la dispersión queda relativamente cerca del límite. |
 | Ambiental + Macrohabitat | 598.905 | Presenta desviaciones en residuos vs predichos. |
 | Ambiental + Microhabitat_rec | 599.049 | Presenta problema de dispersión. |

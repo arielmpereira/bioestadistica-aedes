@@ -1,0 +1,640 @@
+---
+title: "Modelado de abundancia de mosquitos Aedes"
+---
+
+```{r setup}
+#| include: false
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+# Introducción
+
+Este archivo documenta el proceso de modelado de abundancia de mosquitos en criaderos urbanos, a partir de datos del estudio sobre ecología larval de *Aedes* en Bengaluru, India.
+
+El análisis se centra en tres respuestas de abundancia:
+
+-   `Total mosquito emerged`
+-   `Aedes aegypti`
+-   `Aedes albopictus`
+
+Dado que las respuestas son conteos con alta proporción de ceros y sobredispersión, se comparan modelos Poisson, binomial negativa y binomial negativa inflada en ceros. Además, como las grillas tipo **Index** fueron relevadas en distintas estaciones, se incluye **Grid_no** como efecto aleatorio para representar la dependencia entre observaciones de una misma grilla.
+
+# Esquema general del procedimiento
+
+Se ajustan dos modelos biológicamente distintos por cada respuesta, siguiendo el marco conceptual propuesto por Zuur & Ieno (2016). Cada modelo responde una pregunta diferente y se evalúa de forma independiente — **no se comparan entre sí por AIC**:
+
+-   **Modelo de macrohábitat**: captura cómo varía la actividad de cría según el tipo de vecindario o barrio donde se encuentra el criadero.
+-   **Modelo de microhábitat + ambiental**: captura qué tipo de contenedor es el criadero y cuáles son las condiciones físicas dentro de él (temperatura, pH, volumen).
+
+```{r}
+library(DiagrammeR)
+
+grViz("
+digraph flujo {
+
+  graph [layout = dot, rankdir = TB]
+
+  node [shape = box,
+        style = rounded,
+        fontsize = 12]
+
+  A  [label = '1. Filtrado de datos\\nGrid_type = Index / log volume > 0']
+  B  [label = '2. Evaluación de observaciones por grilla\\nUmbral mínimo: 5 obs por grilla']
+  C  [label = '3. Operacionalización de Microhabitat\\nMicrohabitat_bio (2 categorías)\\nExclusión de hábitats naturales (n=14)']
+  D  [label = '4. Evaluación de ceros y sobredispersión']
+
+  E  [label = 'Selección de familia de distribución']
+  E1 [label = 'Poisson']
+  E2 [label = 'Binomial Negativa (NB)']
+  E3 [label = 'ZINB — seleccionada']
+
+  F  [label = 'Modelos biológicos (familia fija: ZINB)\\nNo se comparan entre sí por AIC']
+  F1 [label = 'Modelo de macrohábitat\\nMacrohabitat']
+  F2 [label = 'Modelo de microhábitat + ambiental\\nMicrohabitat_bio + temp + pH + logvol']
+
+  G1 [label = 'DHARMa\\nresiduos / sobredispersión / ceros']
+  G2 [label = 'DHARMa\\nresiduos / sobredispersión / ceros']
+
+  H1 [label = 'Summary + emmeans\\n(contrastes múltiples ajustados)']
+  H2 [label = 'Summary + emmeans\\n(contrastes múltiples ajustados)']
+
+  A -> B -> C -> D -> E
+  E -> E1
+  E -> E2
+  E -> E3
+  E3 -> F
+  F -> F1 -> G1 -> H1
+  F -> F2 -> G2 -> H2
+}
+")
+```
+
+# Carga de paquetes y datos
+
+```{r}
+library(readxl)
+library(dplyr)
+library(tibble)
+library(knitr)
+library(lme4)
+library(glmmTMB)
+library(DHARMa)
+library(ggplot2)
+library(emmeans)
+```
+
+```{r}
+ruta_datos <- "aedes_data.xlsx"
+
+datos <- suppressWarnings(
+  read_excel(ruta_datos)
+)
+
+dim(datos)
+```
+
+# 1. Filtrado de datos y selección de variables
+
+```{r}
+summary(datos$`log volume`)
+sum(is.na(datos$`log volume`))
+
+datos |>
+  filter(`log volume` == 0) |>
+  filter(`Final volume water(ml) without cm` != 0) |>
+  select(`Final volume water(ml) without cm`, `log volume`)
+```
+
+```{r}
+datos_mod <- datos %>%
+  filter(
+    Grid_type == "Index",
+    `log volume` > 0
+  ) %>%
+  select(
+    Prevalence,
+    `Total mosquito emerged`,
+    `Aedes aegypti`,
+    `Aedes albopictus`,
+    Season,
+    Temperature,
+    pH,
+    `log volume`,
+    Macrohabitat,
+    Microhabitat,
+    Grid_no
+  ) %>%
+  mutate(
+    Season       = as.factor(Season),
+    Macrohabitat = as.factor(Macrohabitat),
+    Microhabitat = as.factor(Microhabitat),
+    Grid_no      = as.factor(Grid_no)
+  )
+
+dim(datos_mod)
+```
+
+```{r}
+datos_mod <- datos_mod %>%
+  mutate(
+    temp_std   = as.numeric(scale(Temperature)),
+    pH_std     = as.numeric(scale(pH)),
+    logvol_std = as.numeric(scale(`log volume`))
+  )
+
+dim(datos_mod)
+str(datos_mod)
+sum(is.na(datos_mod))
+```
+
+# 2. Evaluación y filtrado de observaciones por grilla
+
+Para que el efecto aleatorio `(1 | Grid_no)` pueda estimarse de forma estable, cada grilla debe aportar un número mínimo de observaciones. Con muy pocas observaciones por grilla, la varianza del efecto aleatorio no es identificable y el modelo puede producir estimaciones inestables o degenerar (Bolker et al. 2009; Zuur & Ieno 2016, Paso 4).
+
+```{r}
+obs_por_grilla <- datos_mod %>%
+  count(Grid_no, name = "n_obs") %>%
+  arrange(n_obs)
+
+summary(obs_por_grilla$n_obs)
+
+cat("Grillas con menos de 5 observaciones:  ", sum(obs_por_grilla$n_obs < 5),  "\n")
+cat("Grillas con menos de 10 observaciones: ", sum(obs_por_grilla$n_obs < 10), "\n")
+cat("Grillas con menos de 3 observaciones:  ", sum(obs_por_grilla$n_obs < 3),  "\n")
+
+obs_por_grilla %>% filter(n_obs < 5)
+```
+
+```{r}
+hist(
+  obs_por_grilla$n_obs,
+  main = "Distribución de observaciones por grilla",
+  xlab = "Cantidad de observaciones por grilla",
+  ylab = "Cantidad de grillas",
+  col  = "grey80",
+  border = "black"
+)
+abline(v = 5, col = "red", lty = 2, lwd = 2)
+legend("topright", legend = "Umbral = 5 obs.", col = "red", lty = 2, lwd = 2)
+```
+
+Se aplica un umbral mínimo de **5 observaciones por grilla**:
+
+```{r}
+grillas_validas <- obs_por_grilla %>%
+  filter(n_obs >= 5) %>%
+  pull(Grid_no)
+
+n_antes <- nrow(datos_mod)
+datos_mod <- datos_mod %>%
+  filter(Grid_no %in% grillas_validas)
+n_despues <- nrow(datos_mod)
+
+cat("Observaciones antes del filtro: ", n_antes,           "\n")
+cat("Observaciones después del filtro:", n_despues,         "\n")
+cat("Observaciones removidas:         ", n_antes - n_despues, "\n")
+cat("Grillas removidas:               ", sum(obs_por_grilla$n_obs < 5), "\n")
+cat("Grillas que quedan:              ", length(grillas_validas), "\n")
+
+datos_mod$Grid_no <- droplevels(datos_mod$Grid_no)
+```
+
+# 3. Operacionalización de Microhabitat
+
+## Revisión de frecuencias por categoría
+
+```{r}
+datos_mod %>%
+  group_by(Microhabitat) %>%
+  summarise(
+    n_obs            = n(),
+    total_mosquitos  = sum(`Total mosquito emerged`, na.rm = TRUE),
+    prop_ceros       = round(mean(`Total mosquito emerged` == 0, na.rm = TRUE), 2)
+  ) %>%
+  arrange(n_obs)
+```
+
+## Reagrupamiento biológico: Microhabitat_bio
+
+La variable original tiene 9 categorías. Se crea **Microhabitat_bio** con dos categorías biológicamente informativas:
+
+| Categoría | Microhábitats incluidos | Racionalidad biológica |
+|-----------|------------------------|------------------------|
+| `Grinding_stones` (n=70) | Grinding stones (70) | Contenedores de piedra, tradicionales, permanentes y de gran volumen. Culturalmente específicos del Sur de Asia. Material pétreo con propiedades térmicas distintas. Reportados como criaderos altamente productivos. |
+| `Artificial` (n=973) | Discarded containers (435), Pots (209), Storage containers (168), Coconut Shells (82), Stagnant water (49), Discarded tires (30) | Contenedores manufacturados o sitios de acumulación de origen antrópico. Es el grupo de referencia por ser el más numeroso. |
+
+```{r}
+datos_mod <- datos_mod %>%
+  mutate(
+    Microhabitat_bio = case_when(
+      Microhabitat %in% c("Grinding stones") ~ "Grinding_stones",
+      TRUE                                   ~ "Artificial"
+    ),
+    Microhabitat_bio = factor(Microhabitat_bio,
+                              levels = c("Artificial", "Grinding_stones"))
+  )
+```
+
+## Exclusión de hábitats naturales
+
+Las observaciones de Tree holes (n=5) y Plant axils (n=9) se excluyen del análisis. Su bajo número de casos refleja un problema de esfuerzo de muestreo: estos ambientes son los más difíciles de localizar en entornos urbanos y están subrepresentados en el dataset. Incluirlos introduciría un sesgo en la estimación de los efectos del tipo de microhábitat.
+
+```{r}
+n_antes_nat <- nrow(datos_mod)
+
+datos_mod <- datos_mod %>%
+  filter(!Microhabitat %in% c("Tree holes", "Plant axils"))
+
+n_despues_nat <- nrow(datos_mod)
+
+cat("Observaciones antes de excluir hábitats naturales: ", n_antes_nat,              "\n")
+cat("Observaciones después:                             ", n_despues_nat,             "\n")
+cat("Observaciones excluidas:                           ", n_antes_nat - n_despues_nat, "\n")
+
+datos_mod$Microhabitat_bio <- droplevels(datos_mod$Microhabitat_bio)
+datos_mod$Microhabitat     <- droplevels(datos_mod$Microhabitat)
+```
+
+## Verificación del reagrupamiento
+
+```{r}
+datos_mod %>%
+  group_by(Microhabitat_bio) %>%
+  summarise(
+    n_obs           = n(),
+    total_mosquitos = sum(`Total mosquito emerged`, na.rm = TRUE),
+    prop_ceros      = round(mean(`Total mosquito emerged` == 0, na.rm = TRUE), 2)
+  )
+```
+
+El nivel de referencia es `Artificial`. El efecto de `Grinding_stones` se interpreta en comparación con ese grupo.
+
+# 4. Evaluación de ceros y sobredispersión
+
+```{r}
+resumen_abundancia <- data.frame(
+  respuesta = c("Total mosquito emerged", "Aedes aegypti", "Aedes albopictus"),
+
+  n = c(
+    length(datos_mod$`Total mosquito emerged`),
+    length(datos_mod$`Aedes aegypti`),
+    length(datos_mod$`Aedes albopictus`)
+  ),
+
+  proporcion_ceros = c(
+    mean(datos_mod$`Total mosquito emerged` == 0, na.rm = TRUE),
+    mean(datos_mod$`Aedes aegypti` == 0, na.rm = TRUE),
+    mean(datos_mod$`Aedes albopictus` == 0, na.rm = TRUE)
+  ),
+
+  media = c(
+    mean(datos_mod$`Total mosquito emerged`, na.rm = TRUE),
+    mean(datos_mod$`Aedes aegypti`, na.rm = TRUE),
+    mean(datos_mod$`Aedes albopictus`, na.rm = TRUE)
+  ),
+
+  varianza = c(
+    var(datos_mod$`Total mosquito emerged`, na.rm = TRUE),
+    var(datos_mod$`Aedes aegypti`, na.rm = TRUE),
+    var(datos_mod$`Aedes albopictus`, na.rm = TRUE)
+  )
+)
+
+resumen_abundancia$indice_dispersion <- resumen_abundancia$varianza / resumen_abundancia$media
+
+resumen_abundancia
+```
+
+Las tres respuestas presentan alta proporción de ceros e índice de dispersión muy superior a 1, lo que descarta Poisson simple y justifica comparar NB y ZINB.
+
+# 5. Criterio de selección de modelos
+
+## Etapa 1 — Selección de familia de distribución
+
+Se comparan tres familias con la misma estructura base:
+
+`respuesta ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no)`
+
+En los modelos ZINB: `ziformula = ~ Season`
+
+## Etapa 2 — Dos modelos biológicos (sin comparación entre sí)
+
+Una vez elegida la familia, se ajustan dos modelos con preguntas biológicas distintas. No se comparan por AIC — cada uno se evalúa de forma independiente con DHARMa:
+
+| Modelo | Fórmula | Pregunta biológica |
+|--------|---------|-------------------|
+| **Macrohábitat** | `Macrohabitat` | ¿En qué tipo de vecindario/barrio hay más actividad de cría? |
+| **Microhábitat + ambiental** | `Microhabitat_bio + temp_std + pH_std + logvol_std` | ¿Qué tipo de contenedor y qué condiciones físicas dentro del criadero predicen la abundancia? |
+
+En todos los modelos: `+ (1 | Grid_no)` y `ziformula = ~ Season`.
+
+------------------------------------------------------------------------
+
+# 6. Abundancia total (`Total mosquito emerged`)
+
+## Etapa 1: selección de familia
+
+```{r}
+modelo_total_pois <- glmmTMB(
+  `Total mosquito emerged` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  family = poisson,
+  data = datos_mod
+)
+
+modelo_total_nb <- glmmTMB(
+  `Total mosquito emerged` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_total_zinb <- glmmTMB(
+  `Total mosquito emerged` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+AIC(modelo_total_pois, modelo_total_nb, modelo_total_zinb)
+```
+
+## Etapa 2: modelos biológicos (ZINB)
+
+### Modelo A — Macrohábitat
+
+```{r}
+modelo_total_macro <- glmmTMB(
+  `Total mosquito emerged` ~ Macrohabitat + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+```
+
+#### Diagnóstico DHARMa
+
+```{r}
+res_total_macro <- simulateResiduals(modelo_total_macro)
+plot(res_total_macro)
+testDispersion(res_total_macro)
+testZeroInflation(res_total_macro)
+```
+
+#### Summary
+
+```{r}
+summary(modelo_total_macro)
+```
+
+#### Inferencias — contrastes múltiples (Tukey)
+
+```{r}
+emmeans(modelo_total_macro, pairwise ~ Macrohabitat, adjust = "tukey")
+```
+
+---
+
+### Modelo B — Microhábitat + ambiental
+
+```{r}
+modelo_total_micro <- glmmTMB(
+  `Total mosquito emerged` ~ Microhabitat_bio + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+```
+
+#### Diagnóstico DHARMa
+
+```{r}
+res_total_micro <- simulateResiduals(modelo_total_micro)
+plot(res_total_micro)
+testDispersion(res_total_micro)
+testZeroInflation(res_total_micro)
+```
+
+#### Summary
+
+```{r}
+summary(modelo_total_micro)
+```
+
+#### Inferencias — contrastes múltiples (Tukey)
+
+```{r}
+emmeans(modelo_total_micro, pairwise ~ Microhabitat_bio, adjust = "tukey")
+```
+
+------------------------------------------------------------------------
+
+# 7. Abundancia de *Aedes aegypti*
+
+## Etapa 1: selección de familia
+
+```{r}
+modelo_aegypti_pois <- glmmTMB(
+  `Aedes aegypti` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  family = poisson,
+  data = datos_mod
+)
+
+modelo_aegypti_nb <- glmmTMB(
+  `Aedes aegypti` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_aegypti_zinb <- glmmTMB(
+  `Aedes aegypti` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+AIC(modelo_aegypti_pois, modelo_aegypti_nb, modelo_aegypti_zinb)
+```
+
+## Etapa 2: modelos biológicos (ZINB)
+
+### Modelo A — Macrohábitat
+
+```{r}
+modelo_aegypti_macro <- glmmTMB(
+  `Aedes aegypti` ~ Macrohabitat + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+```
+
+#### Diagnóstico DHARMa
+
+```{r}
+res_aegypti_macro <- simulateResiduals(modelo_aegypti_macro)
+plot(res_aegypti_macro)
+testDispersion(res_aegypti_macro)
+testZeroInflation(res_aegypti_macro)
+```
+
+#### Summary
+
+```{r}
+summary(modelo_aegypti_macro)
+```
+
+#### Inferencias — contrastes múltiples (Tukey)
+
+```{r}
+emmeans(modelo_aegypti_macro, pairwise ~ Macrohabitat, adjust = "tukey")
+```
+
+---
+
+### Modelo B — Microhábitat + ambiental
+
+```{r}
+modelo_aegypti_micro <- glmmTMB(
+  `Aedes aegypti` ~ Microhabitat_bio + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+```
+
+#### Diagnóstico DHARMa
+
+```{r}
+res_aegypti_micro <- simulateResiduals(modelo_aegypti_micro)
+plot(res_aegypti_micro)
+testDispersion(res_aegypti_micro)
+testZeroInflation(res_aegypti_micro)
+```
+
+#### Summary
+
+```{r}
+summary(modelo_aegypti_micro)
+```
+
+#### Inferencias — contrastes múltiples (Tukey)
+
+```{r}
+emmeans(modelo_aegypti_micro, pairwise ~ Microhabitat_bio, adjust = "tukey")
+```
+
+------------------------------------------------------------------------
+
+# 8. Abundancia de *Aedes albopictus*
+
+## Etapa 1: selección de familia
+
+```{r}
+modelo_albopictus_pois <- glmmTMB(
+  `Aedes albopictus` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  family = poisson,
+  data = datos_mod
+)
+
+modelo_albopictus_nb <- glmmTMB(
+  `Aedes albopictus` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  family = nbinom2,
+  data = datos_mod
+)
+
+modelo_albopictus_zinb <- glmmTMB(
+  `Aedes albopictus` ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+AIC(modelo_albopictus_pois, modelo_albopictus_nb, modelo_albopictus_zinb)
+```
+
+## Etapa 2: modelos biológicos (ZINB)
+
+### Modelo A — Macrohábitat
+
+```{r}
+modelo_albopictus_macro <- glmmTMB(
+  `Aedes albopictus` ~ Macrohabitat + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+```
+
+#### Diagnóstico DHARMa
+
+```{r}
+res_albopictus_macro <- simulateResiduals(modelo_albopictus_macro)
+plot(res_albopictus_macro)
+testDispersion(res_albopictus_macro)
+testZeroInflation(res_albopictus_macro)
+```
+
+#### Summary
+
+```{r}
+summary(modelo_albopictus_macro)
+```
+
+#### Inferencias — contrastes múltiples (Tukey)
+
+```{r}
+emmeans(modelo_albopictus_macro, pairwise ~ Macrohabitat, adjust = "tukey")
+```
+
+---
+
+### Modelo B — Microhábitat + ambiental
+
+```{r}
+modelo_albopictus_micro <- glmmTMB(
+  `Aedes albopictus` ~ Microhabitat_bio + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+```
+
+#### Diagnóstico DHARMa
+
+```{r}
+res_albopictus_micro <- simulateResiduals(modelo_albopictus_micro)
+plot(res_albopictus_micro)
+testDispersion(res_albopictus_micro)
+testZeroInflation(res_albopictus_micro)
+```
+
+#### Summary
+
+```{r}
+summary(modelo_albopictus_micro)
+```
+
+#### Inferencias — contrastes múltiples (Tukey)
+
+```{r}
+emmeans(modelo_albopictus_micro, pairwise ~ Microhabitat_bio, adjust = "tukey")
+```
+
+------------------------------------------------------------------------
+
+# 9. Conclusión
+
+El modelado de abundancia confirmó las características propias de los conteos ecológicos urbanos: exceso de ceros, sobredispersión y estructura agrupada. En todos los modelos se incluyó `Grid_no` como efecto aleatorio para respetar la dependencia entre observaciones de una misma grilla.
+
+Las observaciones de hábitats naturales (Tree holes, Plant axils, n=14) fueron excluidas del análisis por su bajo número de casos, que refleja un problema de esfuerzo de muestreo y no una característica representativa del sistema.
+
+Se ajustaron dos modelos por respuesta, cada uno respondiendo una pregunta biológica distinta y evaluado de forma independiente:
+
+- El **modelo de macrohábitat** describe cómo varía la actividad de cría según el tipo de vecindario urbano.
+- El **modelo de microhábitat + ambiental** describe cómo el tipo de contenedor y las condiciones físicas del agua determinan la abundancia.
+
+Los diagnósticos DHARMa verificaron el ajuste de cada modelo (residuos, sobredispersión, inflación de ceros). Las inferencias se realizaron con contrastes múltiples ajustados por Tukey mediante el paquete `emmeans`.

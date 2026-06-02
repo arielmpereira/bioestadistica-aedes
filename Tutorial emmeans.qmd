@@ -1,0 +1,935 @@
+---
+title: "Tutorial emmeans"
+---
+
+# Tutorial simple de emmeans
+
+## Ejemplo de trabajo
+
+Primero armamos datos inventados.
+
+```{r}
+# Datos inventados
+datos <- data.frame(
+  mosquitos = c(
+    2, 3, 4,      # seca + natural
+    8, 9, 10,     # lluviosa + natural
+    5, 6, 7,      # post_lluvia + natural
+    
+    4, 5, 6,      # seca + artificial
+    12, 14, 15,   # lluviosa + artificial
+    8, 9, 10      # post_lluvia + artificial
+  ),
+  Season = c(
+    "seca", "seca", "seca",
+    "lluviosa", "lluviosa", "lluviosa",
+    "post_lluvia", "post_lluvia", "post_lluvia",
+    
+    "seca", "seca", "seca",
+    "lluviosa", "lluviosa", "lluviosa",
+    "post_lluvia", "post_lluvia", "post_lluvia"
+  ),
+  Habitat = c(
+    "natural", "natural", "natural",
+    "natural", "natural", "natural",
+    "natural", "natural", "natural",
+    
+    "artificial", "artificial", "artificial",
+    "artificial", "artificial", "artificial",
+    "artificial", "artificial", "artificial"
+  )
+)
+
+datos
+```
+
+### Tenemos tres estaciones:
+
+``` text
+seca
+lluviosa
+post_lluvia
+```
+
+### Y dos tipos de hábitat:
+
+``` text
+natural
+artificial
+```
+
+### La respuesta es:
+
+``` text
+cantidad de mosquitos
+```
+
+------------------------------------------------------------------------
+
+## 1. Ajustar el modelo
+
+Antes de ajustar el modelo, ordenamos los niveles.
+
+```{r}
+datos$Season <- factor(
+  datos$Season,
+  levels = c("seca", "lluviosa", "post_lluvia")
+)
+
+datos$Habitat <- factor(
+  datos$Habitat,
+  levels = c("natural", "artificial")
+)
+
+levels(datos$Season)
+levels(datos$Habitat)
+```
+
+### Esto hace que la referencia sea:
+
+``` text
+Season = seca
+Habitat = natural
+```
+
+### Ahora ajustamos el modelo:
+
+```{r}
+modelo <- glm(
+  mosquitos ~ Season + Habitat,
+  family = poisson(link = "log"),
+  data = datos
+)
+
+summary(modelo)
+```
+
+------------------------------------------------------------------------
+
+## 2. Interpretación del `summary()`
+
+El `summary()` nos da algo como esto:
+
+``` text
+Coefficients:
+                  Estimate
+(Intercept)         1.1484
+Seasonlluviosa      1.0415
+Seasonpost_lluvia   0.6286
+Habitatartificial   0.4299
+```
+
+Al principio esto parece raro.
+
+Uno espera ver:
+
+``` text
+seca + natural = tantos mosquitos
+lluviosa + natural = tantos mosquitos
+seca + artificial = tantos mosquitos
+```
+
+Pero el `summary()` no muestra eso directamente.
+
+El `summary()` muestra piezas del modelo.
+
+------------------------------------------------------------------------
+
+## 2.1 La escala log
+
+El modelo usa:
+
+``` r
+family = poisson(link = "log")
+```
+
+Eso significa que el modelo no trabaja directamente con mosquitos.
+
+Trabaja con:
+
+``` text
+log(media esperada de mosquitos)
+```
+
+Por eso los coeficientes no se leen como mosquitos.
+
+Para volver a la escala de mosquitos usamos:
+
+``` r
+exp()
+```
+
+Regla simple:
+
+``` text
+exp(coeficiente) = multiplicador
+```
+
+------------------------------------------------------------------------
+
+## 2.2 El intercepto
+
+El intercepto es:
+
+``` text
+(Intercept) = 1.1484
+```
+
+Como estamos en escala log, hacemos:
+
+``` r
+exp(1.1484)
+```
+
+Eso da aproximadamente:
+
+``` text
+3.15
+```
+
+Interpretación:
+
+``` text
+En estación seca y hábitat natural se esperan unos 3.15 mosquitos.
+```
+
+¿Por qué seca y natural?
+
+Porque esas son las categorías de referencia.
+
+``` text
+Season = seca
+Habitat = natural
+```
+
+Entonces:
+
+``` text
+intercepto = seca + natural
+```
+
+------------------------------------------------------------------------
+
+## 2.3 Los coeficientes
+
+Ahora miramos los otros coeficientes.
+
+### Estación lluviosa
+
+``` text
+Seasonlluviosa = 1.0415
+```
+
+Hacemos:
+
+``` r
+exp(1.0415)
+```
+
+Da aproximadamente:
+
+``` text
+2.83
+```
+
+Interpretación:
+
+``` text
+La estación lluviosa multiplica por 2.83 la cantidad esperada de mosquitos.
+```
+
+Entonces:
+
+``` r
+3.15 * 2.83
+```
+
+Da aproximadamente:
+
+``` text
+8.9
+```
+
+Interpretación:
+
+``` text
+En estación lluviosa y hábitat natural se esperan unos 8.9 mosquitos.
+```
+
+------------------------------------------------------------------------
+
+### Estación post-lluvia
+
+``` text
+Seasonpost_lluvia = 0.6286
+```
+
+Hacemos:
+
+``` r
+exp(0.6286)
+```
+
+Da aproximadamente:
+
+``` text
+1.88
+```
+
+Interpretación:
+
+``` text
+La estación post-lluvia multiplica por 1.88 la cantidad esperada de mosquitos.
+```
+
+Entonces:
+
+``` r
+3.15 * 1.88
+```
+
+Da aproximadamente:
+
+``` text
+5.9
+```
+
+Interpretación:
+
+``` text
+En estación post-lluvia y hábitat natural se esperan unos 5.9 mosquitos.
+```
+
+------------------------------------------------------------------------
+
+### Hábitat artificial
+
+``` text
+Habitatartificial = 0.4299
+```
+
+Hacemos:
+
+``` r
+exp(0.4299)
+```
+
+Da aproximadamente:
+
+``` text
+1.54
+```
+
+Interpretación:
+
+``` text
+El hábitat artificial multiplica por 1.54 la cantidad esperada de mosquitos.
+```
+
+Entonces:
+
+``` r
+3.15 * 1.54
+```
+
+Da aproximadamente:
+
+``` text
+4.9
+```
+
+Interpretación:
+
+``` text
+En estación seca y hábitat artificial se esperan unos 4.9 mosquitos.
+```
+
+------------------------------------------------------------------------
+
+# 3. Completar la tabla a mano
+
+Hasta acá tenemos estas piezas:
+
+``` text
+Referencia:
+seca + natural = 3.15
+
+Multiplicadores:
+lluviosa = 2.83
+post_lluvia = 1.88
+artificial = 1.54
+```
+
+Ahora podemos completar la tabla.
+
+| Season      | Habitat    |             Cuenta | Mosquitos esperados |
+|-------------|------------|-------------------:|--------------------:|
+| seca        | natural    |               3.15 |                3.15 |
+| lluviosa    | natural    |        3.15 × 2.83 |                 8.9 |
+| post_lluvia | natural    |        3.15 × 1.88 |                 5.9 |
+| seca        | artificial |        3.15 × 1.54 |                 4.9 |
+| lluviosa    | artificial | 3.15 × 2.83 × 1.54 |                13.7 |
+| post_lluvia | artificial | 3.15 × 1.88 × 1.54 |                 9.1 |
+
+Esta tabla ya es mucho más fácil de entender que el `summary()`.
+
+------------------------------------------------------------------------
+
+# 4. Limitación del `summary()`
+
+El `summary()` no está mal.
+
+Pero tiene una limitación:
+
+``` text
+no responde directamente cuántos mosquitos se esperan en cada grupo
+```
+
+El `summary()` da piezas:
+
+``` text
+intercepto
+coeficientes
+errores estándar
+p-valores
+```
+
+Pero si alguien pregunta:
+
+``` text
+¿Cuántos mosquitos se esperan en lluviosa + artificial?
+```
+
+hay que hacer la cuenta:
+
+``` r
+3.15 * 2.83 * 1.54
+```
+
+Con dos variables todavía se puede hacer a mano.
+
+Pero con más variables, más categorías y modelos más complejos, se vuelve incómodo.
+
+Ahí aparece `emmeans`.
+
+------------------------------------------------------------------------
+
+# 5. Uso de `emmeans`
+
+## 5.1 Construir la tabla de medias esperadas
+
+Le pedimos a `emmeans` la tabla completa:
+
+```{r}
+library(emmeans)
+
+emm_tabla <- emmeans(
+  modelo,
+  ~ Season * Habitat,
+  type = "response"
+)
+
+emm_tabla
+```
+
+### Esto significa:
+
+usá el modelo y armame la tabla de mosquitos esperados para cada combinación de Season y Habitat
+
+### La parte:
+
+\~ Season \* Habitat
+
+no cambia el modelo.
+
+Solo le dice a `emmeans`:
+
+mostrame todas las combinaciones de Season y Habitat
+
+### La parte:
+
+type = "response"
+
+significa:
+
+devolveme los resultados en cantidad de mosquitos
+
+### Entonces:
+
+``` text
+summary() = piezas del modelo
+
+emmeans() = tabla armada
+```
+
+------------------------------------------------------------------------
+
+## 5.2 Promedios solo por estación
+
+También podemos pedir solo las estaciones:
+
+```{r}
+emm_season <- emmeans(
+  modelo,
+  ~ Season,
+  type = "response"
+)
+
+emm_season
+```
+
+**Esto devuelve una fila por estación:**
+
+``` text
+seca
+lluviosa
+post_lluvia
+```
+
+Como el modelo también tiene `Habitat`, `emmeans` promedia los hábitats.
+
+Entonces esta tabla responde:
+
+``` text
+¿Cuántos mosquitos se esperan por estación, promediando los hábitats?
+```
+
+------------------------------------------------------------------------
+
+## 5.3 Contrastes con `pairs()`
+
+Después de tener las medias esperadas, puede aparecer otra pregunta:
+
+``` text
+¿Las estaciones son distintas entre sí?
+```
+
+Para eso usamos:
+
+```{r}
+pairs(emm_season)
+```
+
+`pairs()` compara las filas de la tabla.
+
+Si `emm_season` tiene:
+
+``` text
+seca
+lluviosa
+post_lluvia
+```
+
+entonces `pairs()` compara:
+
+``` text
+seca vs lluviosa
+seca vs post_lluvia
+lluviosa vs post_lluvia
+```
+
+Eso se llama contraste.
+
+------------------------------------------------------------------------
+
+## 5.4 Qué es un contraste
+
+Un contraste es una comparación entre dos medias.
+
+En este caso:
+
+``` text
+seca vs lluviosa
+```
+
+pregunta:
+
+``` text
+¿seca y lluviosa tienen medias parecidas o diferentes?
+```
+
+Como este modelo usa link log, `pairs()` suele mostrar ratios.
+
+Por ejemplo:
+
+``` text
+seca / lluviosa = 0.353
+```
+
+Eso significa:
+
+``` text
+seca tiene 0.353 veces los mosquitos de lluviosa
+```
+
+O al revés:
+
+``` text
+lluviosa tiene 2.83 veces los mosquitos de seca
+```
+
+Si el ratio fuera 1:
+
+``` text
+no habría diferencia
+```
+
+Regla simple:
+
+``` text
+ratio = 1  → iguales
+ratio > 1  → el primero es mayor
+ratio < 1  → el primero es menor
+```
+
+------------------------------------------------------------------------
+
+## 5.5 El p-valor del contraste
+
+El p-valor del contraste ayuda a leer si la diferencia es clara o no.
+
+Ejemplo:
+
+``` text
+seca / lluviosa = 0.353
+p < 0.0001
+```
+
+Lectura:
+
+``` text
+seca y lluviosa son claramente diferentes
+```
+
+Otro ejemplo:
+
+``` text
+lluviosa / post_lluvia = 1.51
+p = 0.0804
+```
+
+Lectura:
+
+``` text
+lluviosa parece mayor que post_lluvia,
+pero la diferencia no es tan clara
+```
+
+------------------------------------------------------------------------
+
+## 5.6 Intervalos de confianza
+
+`emmeans` también da intervalos.
+
+Ejemplo:
+
+``` text
+Season       rate    asymp.LCL   asymp.UCL
+seca         3.91      2.62        5.84
+lluviosa    11.08     8.71       14.09
+post_lluvia  7.33     5.46        9.84
+```
+
+Lectura:
+
+``` text
+rate = media estimada
+asymp.LCL = límite inferior
+asymp.UCL = límite superior
+```
+
+Ejemplo:
+
+``` text
+seca tiene una media estimada de 3.91 mosquitos,
+con un intervalo entre 2.62 y 5.84
+```
+
+Esto recuerda que no estamos viendo números exactos.
+
+Estamos viendo estimaciones.
+
+------------------------------------------------------------------------
+
+# 5.7 Forest plot de medias esperadas
+
+Hasta ahora vimos que `emmeans` puede armar una tabla.
+
+Por ejemplo:
+
+```{r}
+emm_season <- emmeans(
+  modelo,
+  ~ Season,
+  type = "response"
+)
+
+emm_season
+```
+
+La columna importante es: rate = mosquitos esperados
+
+**Y los intervalos son:**
+
+asymp.LCL = límite inferior
+
+asymp.UCL = límite superior
+
+**Entonces podemos hacer un gráfico.**
+
+La idea del gráfico es simple:
+
+punto = media esperada
+
+línea = intervalo de confianza
+
+### Primero pasamos el resultado a una tabla:
+
+```{r}
+emm_season_df <- as.data.frame(emm_season)
+emm_season_df
+```
+
+### Ahora graficamos:
+
+```{r}
+library(ggplot2)
+
+ggplot(
+  emm_season_df,
+  aes(
+    x = rate,
+    y = reorder(Season, rate)
+  )
+) +
+  geom_errorbarh(
+    aes(
+      xmin = asymp.LCL,
+      xmax = asymp.UCL
+    ),
+    height = 0.18,
+    linewidth = 0.8
+  ) +
+  geom_point(size = 3.5) +
+  labs(
+    title = "Mosquitos esperados por estación",
+    subtitle = "Medias estimadas por el modelo con intervalos de confianza del 95%",
+    x = "Mosquitos esperados",
+    y = "Estación"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+```
+
+Lectura del gráfico:
+
+Cada punto es la media esperada de mosquitos para una estación. Cada línea muestra el intervalo de confianza.
+
+### **Ejemplo:**
+
+Si lluviosa está más a la derecha, tiene más mosquitos esperados. Si el intervalo es más ancho, hay más incertidumbre.
+
+------------------------------------------------------------------------
+
+## 5.8 Forest plot de contrastes
+
+También podemos graficar los contrastes.
+
+Primero hacemos los contrastes:
+
+```{r}
+contr_season <- pairs(emm_season)
+
+contr_season
+```
+
+### Esto compara:
+
+seca vs lluviosa
+
+seca vs post_lluvia
+
+lluviosa vs post_lluvia
+
+### Pasamos la salida a una tabla:
+
+```{r}
+
+contr_season_df <- as.data.frame(
+  summary(contr_season, infer = c(TRUE, TRUE))
+)
+
+contr_season_df
+```
+
+``` r
+```
+
+En esta salida, lo importante es:
+
+``` text
+contrast = comparación
+ratio = cociente entre medias
+asymp.LCL = límite inferior
+asymp.UCL = límite superior
+```
+
+### Ahora graficamos:
+
+```{r}
+
+ggplot(
+  contr_season_df,
+  aes(
+    x = ratio,
+    y = reorder(contrast, ratio)
+  )
+) +
+  geom_vline(
+    xintercept = 1,
+    linetype = "dashed",
+    linewidth = 0.7
+  ) +
+  geom_errorbarh(
+    aes(
+      xmin = asymp.LCL,
+      xmax = asymp.UCL
+    ),
+    height = 0.18,
+    linewidth = 0.8
+  ) +
+  geom_point(size = 3.5) +
+  labs(
+    title = "Contrastes entre estaciones",
+    subtitle = "Ratios entre medias estimadas con intervalos de confianza del 95%",
+    x = "Ratio entre medias",
+    y = "Contraste"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+```
+
+La línea vertical en 1 es importante.
+
+ratio = 1 significa sin diferencia
+
+Entonces:
+
+``` text
+si el intervalo cruza 1,
+la diferencia no es clara
+
+si el intervalo no cruza 1,
+la diferencia es más clara
+```
+
+Ejemplo:
+
+seca / lluviosa = 0.353
+
+Significa:
+
+seca tiene menos mosquitos que lluviosa
+
+Si queremos leerlo al revés:
+
+1 / 0.353 = 2.83
+
+Entonces:
+
+lluviosa tiene 2.83 veces los mosquitos de seca
+
+### Mismo grafico en escala logaritmica
+
+Como los ratios pueden ser menores o mayores que 1, muchas veces se ve mejor con escala logarítmica:
+
+```{r}
+ggplot(
+  contr_season_df,
+  aes(
+    x = ratio,
+    y = reorder(contrast, ratio)
+  )
+) +
+  geom_vline(
+    xintercept = 1,
+    linetype = "dashed",
+    linewidth = 0.7
+  ) +
+  geom_errorbarh(
+    aes(
+      xmin = asymp.LCL,
+      xmax = asymp.UCL
+    ),
+    height = 0.18,
+    linewidth = 0.8
+  ) +
+  geom_point(size = 3.5) +
+  scale_x_log10() +
+  labs(
+    title = "Contrastes entre estaciones",
+    subtitle = "Ratios entre medias estimadas con intervalos de confianza del 95%",
+    x = "Ratio entre medias",
+    y = "Contraste"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+```
+
+------------------------------------------------------------------------
+
+## 
+
+# 6. Resumen final
+
+La idea completa es esta:
+
+``` text
+summary()
+= piezas del modelo
+```
+
+``` text
+exp(coeficiente)
+= multiplicador
+```
+
+``` text
+tabla a mano
+= combinamos referencia y multiplicadores
+```
+
+``` text
+emmeans()
+= arma esa tabla automáticamente
+```
+
+``` text
+pairs()
+= compara las medias de esa tabla
+```
+
+``` text
+contraste
+= comparación entre dos medias
+```
+
+En nuestro ejemplo:
+
+``` text
+summary() dice coeficientes en escala log
+
+emmeans() dice cuántos mosquitos se esperan
+
+pairs() dice qué grupos se diferencian
+```

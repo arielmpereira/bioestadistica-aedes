@@ -183,7 +183,7 @@ Tabla: Resumen de los diagnósticos por DHARMa de los 6 modelos
 
 En términos generales, los diagnósticos no mostraron problemas suficientemente graves como para descartar la estrategia de modelado elegida. Por eso continuamos con la interpretación de los modelos ZINB.
 
-## 6. Resultados principales
+# 6. Resultados principales
 
 Una vez ajustados y diagnosticados los modelos, el paso siguiente fue interpretar los resultados en una escala más clara. Los `summary()` de los modelos permiten revisar coeficientes, dirección de los efectos y significancia, pero esos coeficientes están en escala logarítmica. Por eso no son la forma más directa de comunicar los resultados.
 
@@ -257,3 +257,5 @@ Para *Aedes albopictus*, el patrón fue más incierto. No se observó una señal
 La parte de inflación de ceros fue importante para mejorar el ajuste de los modelos, porque los datos tenían muchos ceros. Sin embargo, no la tomamos como eje principal de las conclusiones aplicadas. Para responder las preguntas del trabajo priorizamos la parte condicional del modelo, que estima la abundancia esperada de mosquitos.
 
 Este recorrido muestra que la abundancia total permite ver el patrón general, pero que separar por especie aporta información más específica. Al mismo tiempo, al separar por especie aumentan los ceros y la incertidumbre, por lo que las conclusiones sobre *Aedes aegypti* y especialmente sobre *Aedes albopictus* deben leerse con más cautela.
+
+# 8. Anexos

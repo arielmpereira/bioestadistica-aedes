@@ -683,10 +683,9 @@ ggplot(emm_season_todas, aes(x = response, y = Season)) +
   ) +
   facet_wrap(~ respuesta, scales = "free_x") +
   labs(
-    x = "Abundancia esperada",
+    x = "Abundancia esperada por criadero",
     y = "Estación",
-    title = "Abundancia esperada por estación",
-    subtitle = "Estimaciones del modelo ZINB en escala de respuesta"
+    title = "Abundancia esperada por estación"
   ) +
   theme_minimal()
 
@@ -742,10 +741,9 @@ ggplot(emm_microhab_todas, aes(x = response, y = Microhabitat)) +
   ) +
   facet_wrap(~ respuesta, scales = "free_x") +
   labs(
-    x = "Abundancia esperada",
+    x = "Abundancia esperada por criadero",
     y = "Microhábitat",
-    title = "Abundancia esperada por tipo de criadero",
-    subtitle = "Estimaciones del modelo ZINB en escala de respuesta"
+    title = "Abundancia esperada por tipo de criadero"
   ) +
   theme_minimal()
 

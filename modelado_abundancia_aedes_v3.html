@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.37">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Modelado de abundancia de mosquitos Aedes</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="modelado_abundancia_aedes_v3_files/libs/clipboard/clipboard.min.js"></script>
+<script src="modelado_abundancia_aedes_v3_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="modelado_abundancia_aedes_v3_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="modelado_abundancia_aedes_v3_files/libs/quarto-html/popper.min.js"></script>
+<script src="modelado_abundancia_aedes_v3_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="modelado_abundancia_aedes_v3_files/libs/quarto-html/anchor.min.js"></script>
+<link href="modelado_abundancia_aedes_v3_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="modelado_abundancia_aedes_v3_files/libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="modelado_abundancia_aedes_v3_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="modelado_abundancia_aedes_v3_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="modelado_abundancia_aedes_v3_files/libs/bootstrap/bootstrap-b19b4a5815678352e0eaebd94051d641.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="modelado_abundancia_aedes_v3_files/libs/htmltools-fill-0.5.9/fill.css" rel="stylesheet">
+<script src="modelado_abundancia_aedes_v3_files/libs/htmlwidgets-1.6.4/htmlwidgets.js"></script>
+<script src="modelado_abundancia_aedes_v3_files/libs/viz-1.8.2/viz.js"></script>
+<link href="modelado_abundancia_aedes_v3_files/libs/DiagrammeR-styles-0.2/styles.css" rel="stylesheet">
+<script src="modelado_abundancia_aedes_v3_files/libs/grViz-binding-1.0.12/grViz.js"></script>
+
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Modelado de abundancia de mosquitos Aedes</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p><a href="https://strengejacke.github.io/sjPlot/articles/plot_model_estimates.html" class="uri">https://strengejacke.github.io/sjPlot/articles/plot_model_estimates.html</a></p>
+<section id="introducción" class="level1">
+<h1>Introducción</h1>
+<p>Este archivo documenta el proceso de modelado de abundancia de mosquitos en criaderos urbanos, a partir de datos del estudio sobre ecología de larvas de <em>Aedes</em> en Bengaluru, India.</p>
+<p>El análisis se centra en tres respuestas de abundancia:</p>
+<ul>
+<li><code>Total mosquito emerged</code></li>
+<li><code>Aedes aegypti</code></li>
+<li><code>Aedes albopictus</code></li>
+</ul>
+<p>Como las respuestas son conteos, se comparan modelos Poisson, binomial negativa y binomial negativa inflada en ceros. La comparación inicial sirve para decidir qué familia representa mejor los datos. Luego se separan dos líneas de análisis:</p>
+<ul>
+<li>un modelo de <strong>macrohábitat</strong>, que mira el contexto general o tipo de ambiente urbano;</li>
+<li>un modelo de <strong>microhábitat + condiciones del criadero</strong>, que mira el tipo de recipiente y sus condiciones internas.</li>
+</ul>
+<p>La idea no es elegir un único “modelo ganador” mezclando preguntas distintas. El macrohábitat y el microhábitat representan escalas biológicas diferentes. Por eso se modelan por separado y se diagnostican por separado.</p>
+<p>Además, como las grillas tipo <strong>Index</strong> fueron relevadas en distintas estaciones, se incluye <strong>Grid_no</strong> como efecto aleatorio para representar la dependencia entre observaciones de una misma grilla.</p>
+</section>
+<section id="carga-de-paquetes-y-datos" class="level1">
+<h1>Carga de paquetes y datos</h1>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(readxl)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tibble)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(glmmTMB)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(DHARMa)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(emmeans)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(DiagrammeR)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>La ruta debe ajustarse al directorio donde se encuentre la base <code>aedes_data.xlsx</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>ruta_datos <span class="ot">&lt;-</span> <span class="st">"aedes_data.xlsx"</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>datos <span class="ot">&lt;-</span> <span class="fu">suppressWarnings</span>(</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">read_excel</span>(ruta_datos)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(datos)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 8772   44</code></pre>
+</div>
+</div>
+</section>
+<section id="preparación-de-los-datos" class="level1">
+<h1>Preparación de los datos</h1>
+<p>Antes de ajustar modelos se define la base que se va a usar para presencia y abundancia. Esta parte es importante porque las decisiones de filtrado modifican qué observaciones entran al análisis.</p>
+<section id="selección-de-grillas-index" class="level2">
+<h2 class="anchored" data-anchor-id="selección-de-grillas-index">Selección de grillas Index</h2>
+<p>Se trabaja con las grillas tipo <code>Index</code>, porque son las que fueron relevadas en distintas estaciones. Esto permite analizar la abundancia y presencia considerando la estructura temporal del muestreo.</p>
+</section>
+<section id="revisión-de-log-volume" class="level2">
+<h2 class="anchored" data-anchor-id="revisión-de-log-volume">Revisión de <code>log volume</code></h2>
+<p>Antes de filtrar, se revisa la variable <code>log volume</code>, porque es central para decidir qué observaciones deben quedar dentro del análisis de abundancia.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(datos<span class="sc">$</span><span class="st">`</span><span class="at">log volume</span><span class="st">`</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.0000  0.0000  0.4398  0.0000  6.3010 </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(<span class="fu">is.na</span>(datos<span class="sc">$</span><span class="st">`</span><span class="at">log volume</span><span class="st">`</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>datos <span class="sc">|&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="st">`</span><span class="at">log volume</span><span class="st">`</span> <span class="sc">==</span> <span class="dv">0</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(<span class="st">`</span><span class="at">Final volume water(ml) without cm</span><span class="st">`</span>, <span class="st">`</span><span class="at">log volume</span><span class="st">`</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 3
+  `Final volume water(ml) without cm` `log volume`     n
+                                &lt;dbl&gt;        &lt;dbl&gt; &lt;int&gt;
+1                                   0            0  7458</code></pre>
+</div>
+</div>
+<p>Aunque matemáticamente <code>log(1) = 0</code>, en esta base los valores <code>log volume = 0</code> no corresponden a criaderos con 1 ml de agua. Al revisar la variable de volumen original, se observa que el menor volumen positivo registrado es mayor que 1 ml. Por eso, los valores <code>log volume = 0</code> se interpretan como criaderos secos o sin volumen útil para el análisis.</p>
+<p>Estos criaderos secos son ceros estructurales evidentes: si no hay agua, no puede haber larvas. Por ese motivo se excluyen antes del modelado.</p>
+<p>Sin embargo, luego de filtrar los criaderos secos, entre los criaderos con agua todavía pueden quedar ceros. Por ejemplo, puede haber agua pero no larvas por condiciones de temperatura, pH, tipo de criadero, estacionalidad u otros factores no medidos. Esta situación justifica explorar modelos inflados en cero.</p>
+</section>
+<section id="revisión-de-las-categorías-de-microhábitat" class="level2">
+<h2 class="anchored" data-anchor-id="revisión-de-las-categorías-de-microhábitat">Revisión de las categorías de microhábitat</h2>
+<p>También se revisa la cantidad de observaciones por categoría de <code>Microhabitat</code>. En un estudio observacional no se espera que todas las categorías estén balanceadas. En una ciudad, algunos criaderos aparecen mucho más que otros. El problema no es el desbalance en sí, sino tener categorías con muy pocas observaciones, porque pueden generar estimaciones inestables y difíciles de interpretar.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>datos <span class="sc">|&gt;</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    Grid_type <span class="sc">==</span> <span class="st">"Index"</span>,</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">log volume</span><span class="st">`</span> <span class="sc">&gt;</span> <span class="dv">0</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Microhabitat) <span class="sc">|&gt;</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_obs =</span> <span class="fu">n</span>(),</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">total_mosquitos =</span> <span class="fu">sum</span>(<span class="st">`</span><span class="at">Total mosquito emerged</span><span class="st">`</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">ceros =</span> <span class="fu">sum</span>(<span class="st">`</span><span class="at">Total mosquito emerged</span><span class="st">`</span> <span class="sc">==</span> <span class="dv">0</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">prop_ceros =</span> <span class="fu">mean</span>(<span class="st">`</span><span class="at">Total mosquito emerged</span><span class="st">`</span> <span class="sc">==</span> <span class="dv">0</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(n_obs)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 9 × 5
+  Microhabitat         n_obs total_mosquitos ceros prop_ceros
+  &lt;chr&gt;                &lt;int&gt;           &lt;dbl&gt; &lt;int&gt;      &lt;dbl&gt;
+1 Tree holes               5               4     4      0.8  
+2 Plant axils              9               6     6      0.667
+3 Discarded tires         30              28    23      0.767
+4 Stagnant water          49              32    39      0.796
+5 Grinding stones         70             172    44      0.629
+6 Coconut Shells          82              84    64      0.780
+7 Storage containers     169             226   127      0.751
+8 Pots                   209             136   182      0.871
+9 Discarded containers   443             334   399      0.901</code></pre>
+</div>
+</div>
+<p>Al revisar <strong>Microhabitat</strong>, vimos que <strong>Tree holes</strong> y <strong>Plant axils</strong> tienen muy pocas observaciones. Por eso decidimos eliminarlas antes del modelado. Con tan pocos datos, esas categorías podían generar estimaciones poco confiables.</p>
+</section>
+<section id="creación-de-la-base-de-modelado" class="level2">
+<h2 class="anchored" data-anchor-id="creación-de-la-base-de-modelado">Creación de la base de modelado</h2>
+<p>A partir de estas decisiones se crea <strong>datos_mod</strong>, que será la base usada para los modelos de abundancia.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>datos_mod <span class="ot">&lt;-</span> datos <span class="sc">%&gt;%</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    Grid_type <span class="sc">==</span> <span class="st">"Index"</span>,</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">log volume</span><span class="st">`</span> <span class="sc">&gt;</span> <span class="dv">0</span>,</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    <span class="sc">!</span>Microhabitat <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Tree holes"</span>, <span class="st">"Plant axils"</span>)</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    Prevalence,</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">Total mosquito emerged</span><span class="st">`</span>,</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">Aedes aegypti</span><span class="st">`</span>,</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">Aedes albopictus</span><span class="st">`</span>,</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    Season,</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>    Temperature,</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    pH,</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">log volume</span><span class="st">`</span>,</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>    Macrohabitat,</span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>    Microhabitat,</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>    Grid_no</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">Season =</span> <span class="fu">as.factor</span>(Season),</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">Macrohabitat =</span> <span class="fu">as.factor</span>(Macrohabitat),</span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">Microhabitat =</span> <span class="fu">as.factor</span>(Microhabitat),</span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">Grid_no =</span> <span class="fu">as.factor</span>(Grid_no)</span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">droplevels</span>()</span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(datos_mod)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 1052   11</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(datos_mod)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>tibble [1,052 × 11] (S3: tbl_df/tbl/data.frame)
+ $ Prevalence            : num [1:1052] 0 1 1 0 1 0 0 0 0 0 ...
+ $ Total mosquito emerged: num [1:1052] 0 16 4 0 0 0 0 0 0 0 ...
+ $ Aedes aegypti         : num [1:1052] 0 16 0 0 0 0 0 0 0 0 ...
+ $ Aedes albopictus      : num [1:1052] 0 0 4 0 0 0 0 0 0 0 ...
+ $ Season                : Factor w/ 4 levels "april-june","feb-march",..: 2 2 2 2 2 2 2 2 2 2 ...
+ $ Temperature           : num [1:1052] 28.2 30.2 30.2 27.3 28.5 26.9 26.1 30.4 29.3 30 ...
+ $ pH                    : num [1:1052] 8.4 7.2 7.2 6.9 6.8 7.9 7.5 8.3 7.7 8.2 ...
+ $ log volume            : num [1:1052] 2 2.7 2.7 5.18 5.18 ...
+ $ Macrohabitat          : Factor w/ 6 levels "Barren Land",..: 3 3 3 3 3 3 3 6 6 6 ...
+ $ Microhabitat          : Factor w/ 7 levels "Coconut Shells",..: 1 4 4 6 6 7 7 2 2 4 ...
+ $ Grid_no               : Factor w/ 48 levels "1","2","3","4",..: 14 14 14 14 14 14 14 23 23 23 ...</code></pre>
+</div>
+</div>
+<p>Controlamos cómo quedó la distribución de <code>Microhabitat</code> luego del filtrado.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>datos_mod <span class="sc">%&gt;%</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Microhabitat) <span class="sc">%&gt;%</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_obs =</span> <span class="fu">n</span>(),</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">total_mosquitos =</span> <span class="fu">sum</span>(<span class="st">`</span><span class="at">Total mosquito emerged</span><span class="st">`</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">ceros =</span> <span class="fu">sum</span>(<span class="st">`</span><span class="at">Total mosquito emerged</span><span class="st">`</span> <span class="sc">==</span> <span class="dv">0</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">prop_ceros =</span> <span class="fu">mean</span>(<span class="st">`</span><span class="at">Total mosquito emerged</span><span class="st">`</span> <span class="sc">==</span> <span class="dv">0</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(n_obs)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 7 × 5
+  Microhabitat         n_obs total_mosquitos ceros prop_ceros
+  &lt;fct&gt;                &lt;int&gt;           &lt;dbl&gt; &lt;int&gt;      &lt;dbl&gt;
+1 Discarded tires         30              28    23      0.767
+2 Stagnant water          49              32    39      0.796
+3 Grinding stones         70             172    44      0.629
+4 Coconut Shells          82              84    64      0.780
+5 Storage containers     169             226   127      0.751
+6 Pots                   209             136   182      0.871
+7 Discarded containers   443             334   399      0.901</code></pre>
+</div>
+</div>
+</section>
+<section id="estandarizacón-de-variables" class="level2">
+<h2 class="anchored" data-anchor-id="estandarizacón-de-variables">Estandarizacón de variables</h2>
+<p>Las variables continuas se estandarizan para facilitar la comparación entre efectos. En los modelos, un cambio de una unidad en estas variables representa un cambio de una desviación estándar en la variable original.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>datos_mod <span class="ot">&lt;-</span> datos_mod <span class="sc">%&gt;%</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">temp_std =</span> <span class="fu">as.numeric</span>(<span class="fu">scale</span>(Temperature)),</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">pH_std =</span> <span class="fu">as.numeric</span>(<span class="fu">scale</span>(pH)),</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">logvol_std =</span> <span class="fu">as.numeric</span>(<span class="fu">scale</span>(<span class="st">`</span><span class="at">log volume</span><span class="st">`</span>))</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(<span class="fu">is.na</span>(datos_mod))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0</code></pre>
+</div>
+</div>
+</section>
+<section id="evaluación-de-sobredispersión-e-inflación-de-ceros" class="level2">
+<h2 class="anchored" data-anchor-id="evaluación-de-sobredispersión-e-inflación-de-ceros">Evaluación de sobredispersión e inflación de ceros</h2>
+<p>Antes de ajustar modelos, se evalúa la proporción de ceros, la media, la varianza y el índice de dispersión de cada respuesta.</p>
+<p>En una distribución Poisson, la media y la varianza deberían ser aproximadamente similares. Por eso, un índice de dispersión muy superior a 1 es una señal de sobredispersión.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>resumen_abundancia <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">respuesta =</span> <span class="fu">c</span>(<span class="st">"Total mosquito emerged"</span>, <span class="st">"Aedes aegypti"</span>, <span class="st">"Aedes albopictus"</span>),</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">n =</span> <span class="fu">c</span>(</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">length</span>(datos_mod<span class="sc">$</span><span class="st">`</span><span class="at">Total mosquito emerged</span><span class="st">`</span>),</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">length</span>(datos_mod<span class="sc">$</span><span class="st">`</span><span class="at">Aedes aegypti</span><span class="st">`</span>),</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">length</span>(datos_mod<span class="sc">$</span><span class="st">`</span><span class="at">Aedes albopictus</span><span class="st">`</span>)</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">proporcion_ceros =</span> <span class="fu">c</span>(</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mean</span>(datos_mod<span class="sc">$</span><span class="st">`</span><span class="at">Total mosquito emerged</span><span class="st">`</span> <span class="sc">==</span> <span class="dv">0</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mean</span>(datos_mod<span class="sc">$</span><span class="st">`</span><span class="at">Aedes aegypti</span><span class="st">`</span> <span class="sc">==</span> <span class="dv">0</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mean</span>(datos_mod<span class="sc">$</span><span class="st">`</span><span class="at">Aedes albopictus</span><span class="st">`</span> <span class="sc">==</span> <span class="dv">0</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">media =</span> <span class="fu">c</span>(</span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mean</span>(datos_mod<span class="sc">$</span><span class="st">`</span><span class="at">Total mosquito emerged</span><span class="st">`</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mean</span>(datos_mod<span class="sc">$</span><span class="st">`</span><span class="at">Aedes aegypti</span><span class="st">`</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mean</span>(datos_mod<span class="sc">$</span><span class="st">`</span><span class="at">Aedes albopictus</span><span class="st">`</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">varianza =</span> <span class="fu">c</span>(</span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">var</span>(datos_mod<span class="sc">$</span><span class="st">`</span><span class="at">Total mosquito emerged</span><span class="st">`</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">var</span>(datos_mod<span class="sc">$</span><span class="st">`</span><span class="at">Aedes aegypti</span><span class="st">`</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">var</span>(datos_mod<span class="sc">$</span><span class="st">`</span><span class="at">Aedes albopictus</span><span class="st">`</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a>resumen_abundancia<span class="sc">$</span>indice_dispersion <span class="ot">&lt;-</span> resumen_abundancia<span class="sc">$</span>varianza <span class="sc">/</span> resumen_abundancia<span class="sc">$</span>media</span>
+<span id="cb20-26"><a href="#cb20-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-27"><a href="#cb20-27" aria-hidden="true" tabindex="-1"></a>resumen_abundancia</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>               respuesta    n proporcion_ceros     media  varianza
+1 Total mosquito emerged 1052        0.8346008 0.9619772 11.444795
+2          Aedes aegypti 1052        0.9182510 0.5228137  7.614132
+3       Aedes albopictus 1052        0.9591255 0.2756654  3.413946
+  indice_dispersion
+1          11.89716
+2          14.56376
+3          12.38438</code></pre>
+</div>
+</div>
+<p>Las tres respuestas suelen presentar una proporción alta de ceros y un índice de dispersión superior a 1. Esto indica que un modelo Poisson simple probablemente no sea adecuado.</p>
+<p>La alta proporción de ceros sugiere que puede existir un proceso adicional generando ceros extra. Por este motivo, se comparan tres tipos de modelos:</p>
+<ol type="1">
+<li>Poisson.</li>
+<li>Binomial negativa, para manejar sobredispersión.</li>
+<li>Binomial negativa inflada en cero, para manejar sobredispersión y ceros extra.</li>
+</ol>
+</section>
+<section id="estrategia-de-modelado" class="level2">
+<h2 class="anchored" data-anchor-id="estrategia-de-modelado">Estrategia de modelado</h2>
+<p>Primero se evaluó qué tipo de modelo es más adecuado para analizar la abundancia de mosquitos. Se compararon tres opciones: Poisson, binomial negativo y binomial negativo inflado en ceros.</p>
+<p>Una vez elegido el modelo más adecuada para los conteos, se plantearon modelos separados para macrohábitat y microhábitat. No se buscó un único modelo ganador entre ambos, porque responden preguntas distintas: el macrohábitat describe el contexto general del ambiente urbano, mientras que el microhábitat describe el tipo de criadero y sus condiciones internas.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div class="grViz html-widget html-fill-item" id="htmlwidget-c1c57caa5f362f2fb557" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-c1c57caa5f362f2fb557">{"x":{"diagram":"\ndigraph seleccion_modelos {\n\n  graph [layout = dot, rankdir = TB]\n\n  node [\n    shape = rectangle,\n    style = \"rounded,filled\",\n    fillcolor = \"#F2F2F2\",\n    color = \"#4D4D4D\",\n    fontname = Helvetica,\n    fontsize = 12\n  ]\n\n  edge [\n    color = \"#4D4D4D\",\n    arrowsize = 0.8\n  ]\n\n  A [label = \"Datos de abundancia\"]\n  B [label = \"Selección de familia de errores\nPoisson / NB / ZINB\"]\n  C [label = \"Familia elegida para conteos\"]\n  D1 [label = \"Modelo de macrohábitat\nPregunta: vecindario / ambiente urbano\"]\n  D2 [label = \"Modelo de microhábitat + condiciones\nPregunta: criadero y condiciones internas\"]\n  E1 [label = \"Diagnóstico DHARMa\"]\n  E2 [label = \"Diagnóstico DHARMa\"]\n  F1 [label = \"Inferencias del modelo\nsummary + emmeans\"]\n  F2 [label = \"Inferencias del modelo\nsummary + emmeans\"]\n\n  A -> B -> C\n  C -> D1 -> E1 -> F1\n  C -> D2 -> E2 -> F2\n}\n","config":{"engine":"dot","options":null}},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<p>El modelo de macrohábitat se interpreta como una pregunta sobre el ambiente general donde se encuentra el criadero. El modelo de microhábitat + condiciones se interpreta como una pregunta sobre el recipiente y las condiciones internas del criadero.</p>
+<p>Por eso, en esta versión el modelo de macrohábitat no incluye temperatura, pH ni volumen. Esas variables son condiciones medidas dentro del criadero y se analizan en la línea de microhábitat.</p>
+<hr>
+</section>
+</section>
+<section id="selección-de-familia-de-modelos" class="level1">
+<h1>Selección de familia de modelos</h1>
+<p>Se comparan modelos con los mismos predictores, cambiando solo la familia: Poisson, binomial negativa o binomial negativa inflada en ceros. Esto permite evaluar qué tipo de modelo se ajusta mejor a la variable respuesta sin mezclar esta decisión con cambios en las covariables del modelo.</p>
+<p>La fórmula base usada para esta comparación es:</p>
+<p><code>respuesta ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no)</code></p>
+<p>En los modelos ZINB se agrega:</p>
+<p><code>ziformula = ~ Season</code></p>
+<p>En un modelo inflado en ceros hay dos partes. La parte condicional es el modelo de conteo: estima cuántos mosquitos se esperan en cada criadero. Esta parte también puede dar cero, porque un criadero puede tener agua y aun así no producir mosquitos.</p>
+<p>La parte <strong>ziformula</strong> se agrega cuando hay demasiados ceros. Es decir, el modelo de conteo ya espera algunos ceros, pero en los datos aparecen más ceros de los que ese modelo maneja bien. Entonces se agrega una parte extra para representar esos ceros adicionales.</p>
+<section id="abundancia-total" class="level2">
+<h2 class="anchored" data-anchor-id="abundancia-total">Abundancia total</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>modelo_total_pois <span class="ot">&lt;-</span> <span class="fu">glmmTMB</span>(</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Total mosquito emerged</span><span class="st">`</span> <span class="sc">~</span> Season <span class="sc">+</span> temp_std <span class="sc">+</span> pH_std <span class="sc">+</span> logvol_std <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Grid_no),</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> poisson,</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> datos_mod</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>modelo_total_nb <span class="ot">&lt;-</span> <span class="fu">glmmTMB</span>(</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Total mosquito emerged</span><span class="st">`</span> <span class="sc">~</span> Season <span class="sc">+</span> temp_std <span class="sc">+</span> pH_std <span class="sc">+</span> logvol_std <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Grid_no),</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> nbinom2,</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> datos_mod</span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>modelo_total_zinb_base <span class="ot">&lt;-</span> <span class="fu">glmmTMB</span>(</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Total mosquito emerged</span><span class="st">`</span> <span class="sc">~</span> Season <span class="sc">+</span> temp_std <span class="sc">+</span> pH_std <span class="sc">+</span> logvol_std <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Grid_no),</span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">ziformula =</span> <span class="sc">~</span> Season,</span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> nbinom2,</span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> datos_mod</span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a><span class="fu">AIC</span>(modelo_total_pois, modelo_total_nb, modelo_total_zinb_base)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                       df      AIC
+modelo_total_pois       8 4123.998
+modelo_total_nb         9 1850.840
+modelo_total_zinb_base 13 1804.167</code></pre>
+</div>
+</div>
+</section>
+<section id="abundancia-de-aedes-aegypti" class="level2">
+<h2 class="anchored" data-anchor-id="abundancia-de-aedes-aegypti">Abundancia de <em>Aedes aegypti</em></h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>modelo_aegypti_pois <span class="ot">&lt;-</span> <span class="fu">glmmTMB</span>(</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Aedes aegypti</span><span class="st">`</span> <span class="sc">~</span> Season <span class="sc">+</span> temp_std <span class="sc">+</span> pH_std <span class="sc">+</span> logvol_std <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Grid_no),</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> poisson,</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> datos_mod</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>modelo_aegypti_nb <span class="ot">&lt;-</span> <span class="fu">glmmTMB</span>(</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Aedes aegypti</span><span class="st">`</span> <span class="sc">~</span> Season <span class="sc">+</span> temp_std <span class="sc">+</span> pH_std <span class="sc">+</span> logvol_std <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Grid_no),</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> nbinom2,</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> datos_mod</span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>modelo_aegypti_zinb_base <span class="ot">&lt;-</span> <span class="fu">glmmTMB</span>(</span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Aedes aegypti</span><span class="st">`</span> <span class="sc">~</span> Season <span class="sc">+</span> temp_std <span class="sc">+</span> pH_std <span class="sc">+</span> logvol_std <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Grid_no),</span>
+<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">ziformula =</span> <span class="sc">~</span> Season,</span>
+<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> nbinom2,</span>
+<span id="cb24-17"><a href="#cb24-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> datos_mod</span>
+<span id="cb24-18"><a href="#cb24-18" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb24-19"><a href="#cb24-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-20"><a href="#cb24-20" aria-hidden="true" tabindex="-1"></a><span class="fu">AIC</span>(modelo_aegypti_pois, modelo_aegypti_nb, modelo_aegypti_zinb_base)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                         df      AIC
+modelo_aegypti_pois       8 2721.889
+modelo_aegypti_nb         9 1067.675
+modelo_aegypti_zinb_base 13 1059.550</code></pre>
+</div>
+</div>
+</section>
+<section id="abundancia-de-aedes-albopictus" class="level2">
+<h2 class="anchored" data-anchor-id="abundancia-de-aedes-albopictus">Abundancia de <em>Aedes albopictus</em></h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>modelo_albopictus_pois <span class="ot">&lt;-</span> <span class="fu">glmmTMB</span>(</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Aedes albopictus</span><span class="st">`</span> <span class="sc">~</span> Season <span class="sc">+</span> temp_std <span class="sc">+</span> pH_std <span class="sc">+</span> logvol_std <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Grid_no),</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> poisson,</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> datos_mod</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>modelo_albopictus_nb <span class="ot">&lt;-</span> <span class="fu">glmmTMB</span>(</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Aedes albopictus</span><span class="st">`</span> <span class="sc">~</span> Season <span class="sc">+</span> temp_std <span class="sc">+</span> pH_std <span class="sc">+</span> logvol_std <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Grid_no),</span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> nbinom2,</span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> datos_mod</span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a>modelo_albopictus_zinb_base <span class="ot">&lt;-</span> <span class="fu">glmmTMB</span>(</span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Aedes albopictus</span><span class="st">`</span> <span class="sc">~</span> Season <span class="sc">+</span> temp_std <span class="sc">+</span> pH_std <span class="sc">+</span> logvol_std <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Grid_no),</span>
+<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">ziformula =</span> <span class="sc">~</span> Season,</span>
+<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> nbinom2,</span>
+<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> datos_mod</span>
+<span id="cb26-18"><a href="#cb26-18" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb26-19"><a href="#cb26-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-20"><a href="#cb26-20" aria-hidden="true" tabindex="-1"></a><span class="fu">AIC</span>(modelo_albopictus_pois, modelo_albopictus_nb, modelo_albopictus_zinb_base)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                            df       AIC
+modelo_albopictus_pois       8 1329.6158
+modelo_albopictus_nb         9  584.9918
+modelo_albopictus_zinb_base 13  568.7676</code></pre>
+</div>
+</div>
+</section>
+<section id="resumen-de-la-comparación-base" class="level2">
+<h2 class="anchored" data-anchor-id="resumen-de-la-comparación-base">Resumen de la comparación base</h2>
+<table class="caption-top table">
+<caption>Los modelos ZINB presentan el menor AIC en las tres respuestas. Por lo tanto, para continuar el análisis se utlizan <strong>modelos binomiales negativos inflados en cero</strong>, especialmente porque permiten modelar dos procesos: la abundancia esperada y la probabilidad de ceros extra.</caption>
+<colgroup>
+<col style="width: 17%">
+<col style="width: 32%">
+<col style="width: 22%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th><strong>Respuesta</strong></th>
+<th><strong>Total mosquito emerged</strong></th>
+<th><strong>Aedes aegypti</strong></th>
+<th><strong>Aedes albopictus</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Poisson</strong></td>
+<td>4123</td>
+<td>2721</td>
+<td>1329</td>
+</tr>
+<tr class="even">
+<td><strong>NB</strong></td>
+<td>1850</td>
+<td>1067</td>
+<td>584</td>
+</tr>
+<tr class="odd">
+<td><strong>ZINB</strong></td>
+<td>1804</td>
+<td>1059</td>
+<td>568</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+</section>
+<section id="modelos-para-abundancia-total" class="level1">
+<h1>Modelos para abundancia total</h1>
+<section id="modelo-de-macrohábitat" class="level2">
+<h2 class="anchored" data-anchor-id="modelo-de-macrohábitat">Modelo de macrohábitat</h2>
+<p>Este modelo pregunta si la abundancia cambia según el tipo de ambiente urbano o vecindario. No intenta explicar el detalle del recipiente, sino el contexto general donde aparece el criadero.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>modelo_total_macro <span class="ot">&lt;-</span> <span class="fu">glmmTMB</span>(</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Total mosquito emerged</span><span class="st">`</span> <span class="sc">~</span> Season <span class="sc">+</span> Macrohabitat <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Grid_no),</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">ziformula =</span> <span class="sc">~</span> Season,</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> nbinom2,</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> datos_mod</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>res_total_macro <span class="ot">&lt;-</span> <span class="fu">simulateResiduals</span>(modelo_total_macro)</span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(res_total_macro)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="modelado_abundancia_aedes_v3_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>El diagnóstico con DHARMa no muestra problemas importantes en los residuos. El QQ plot se ve bastante alineado con la diagonal y los test de uniformidad, dispersión y outliers no son significativos. Además, en el gráfico de residuos versus predichos no aparecen desviaciones significativas. Por eso, este modelo parece ajustar razonablemente bien para analizar la abundancia total desde la escala de macrohábitat.</p>
+</section>
+<section id="modelo-de-microhábitat-condiciones-del-criadero" class="level2">
+<h2 class="anchored" data-anchor-id="modelo-de-microhábitat-condiciones-del-criadero">Modelo de microhábitat + condiciones del criadero</h2>
+<p>Este modelo mira el tipo de criadero y sus condiciones internas: temperatura, pH y volumen. Este es el modelo más alineado con la pregunta del microhábitat, porque no solo importa qué tipo de recipiente es, sino también cómo son las condiciones dentro de ese recipiente.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>modelo_total_micro_cond <span class="ot">&lt;-</span> <span class="fu">glmmTMB</span>(</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Total mosquito emerged</span><span class="st">`</span> <span class="sc">~</span> Season <span class="sc">+</span> Microhabitat <span class="sc">+</span> temp_std <span class="sc">+</span> pH_std <span class="sc">+</span> logvol_std <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Grid_no),</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">ziformula =</span> <span class="sc">~</span> Season,</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> nbinom2,</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> datos_mod</span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>res_total_micro_cond <span class="ot">&lt;-</span> <span class="fu">simulateResiduals</span>(modelo_total_micro_cond)</span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(res_total_micro_cond)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="modelado_abundancia_aedes_v3_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>El diagnóstico con DHARMa no muestra problemas importantes en los residuos.</p>
+<hr>
+</section>
+</section>
+<section id="modelos-para-abundancia-de-aedes-aegypti" class="level1">
+<h1>Modelos para abundancia de <em>Aedes aegypti</em></h1>
+<p>Para <em>Aedes aegypti</em> se sigue la misma lógica. Se ajusta un modelo de macrohábitat y un modelo de microhábitat + condiciones. Si alguno muestra problemas en DHARMa, no se fuerza la interpretación.</p>
+<section id="modelo-de-macrohábitat-1" class="level2">
+<h2 class="anchored" data-anchor-id="modelo-de-macrohábitat-1">Modelo de macrohábitat</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>modelo_aegypti_macro <span class="ot">&lt;-</span> <span class="fu">glmmTMB</span>(</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Aedes aegypti</span><span class="st">`</span> <span class="sc">~</span> Season <span class="sc">+</span> Macrohabitat <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Grid_no),</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">ziformula =</span> <span class="sc">~</span> Season,</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> nbinom2,</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> datos_mod</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>res_aegypti_macro <span class="ot">&lt;-</span> <span class="fu">simulateResiduals</span>(modelo_aegypti_macro)</span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(res_aegypti_macro)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="modelado_abundancia_aedes_v3_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>El diagnóstico con DHARMa no muestra problemas importantes en los residuos.</p>
+</section>
+<section id="modelo-de-microhábitat-condiciones-del-criadero-1" class="level2">
+<h2 class="anchored" data-anchor-id="modelo-de-microhábitat-condiciones-del-criadero-1">Modelo de microhábitat + condiciones del criadero</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>modelo_aegypti_micro_cond <span class="ot">&lt;-</span> <span class="fu">glmmTMB</span>(</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Aedes aegypti</span><span class="st">`</span> <span class="sc">~</span> Season <span class="sc">+</span> Microhabitat <span class="sc">+</span> temp_std <span class="sc">+</span> pH_std <span class="sc">+</span> logvol_std <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Grid_no),</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">ziformula =</span> <span class="sc">~</span> Season,</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> nbinom2,</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> datos_mod</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>res_aegypti_micro_cond <span class="ot">&lt;-</span> <span class="fu">simulateResiduals</span>(modelo_aegypti_micro_cond)</span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(res_aegypti_micro_cond)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="modelado_abundancia_aedes_v3_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>El diagnóstico con DHARMa no muestra problemas importantes en los residuos.</p>
+<hr>
+</section>
+</section>
+<section id="modelos-para-abundancia-de-aedes-albopictus" class="level1">
+<h1>Modelos para abundancia de <em>Aedes albopictus</em></h1>
+<section id="modelo-de-macrohábitat-2" class="level2">
+<h2 class="anchored" data-anchor-id="modelo-de-macrohábitat-2">Modelo de macrohábitat</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>modelo_albopictus_macro <span class="ot">&lt;-</span> <span class="fu">glmmTMB</span>(</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Aedes albopictus</span><span class="st">`</span> <span class="sc">~</span> Season <span class="sc">+</span> Macrohabitat <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Grid_no),</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">ziformula =</span> <span class="sc">~</span> Season,</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> nbinom2,</span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> datos_mod</span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>res_albopictus_macro <span class="ot">&lt;-</span> <span class="fu">simulateResiduals</span>(modelo_albopictus_macro)</span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(res_albopictus_macro)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="modelado_abundancia_aedes_v3_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>El diagnóstico con DHARMa no muestra problemas importantes en los residuos.</p>
+</section>
+<section id="modelo-de-microhábitat-condiciones-del-criadero-2" class="level2">
+<h2 class="anchored" data-anchor-id="modelo-de-microhábitat-condiciones-del-criadero-2">Modelo de microhábitat + condiciones del criadero</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>modelo_albopictus_micro_cond <span class="ot">&lt;-</span> <span class="fu">glmmTMB</span>(</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Aedes albopictus</span><span class="st">`</span> <span class="sc">~</span> Season <span class="sc">+</span> Microhabitat <span class="sc">+</span> temp_std <span class="sc">+</span> pH_std <span class="sc">+</span> logvol_std <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Grid_no),</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">ziformula =</span> <span class="sc">~</span> Season,</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> nbinom2,</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> datos_mod</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>res_albopictus_micro_cond <span class="ot">&lt;-</span> <span class="fu">simulateResiduals</span>(modelo_albopictus_micro_cond)</span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(res_albopictus_micro_cond)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="modelado_abundancia_aedes_v3_files/figure-html/unnamed-chunk-19-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>El diagnóstico con DHARMa no muestra problemas importantes en los residuos.</p>
+<hr>
+</section>
+<section id="interpretación-de-los-modelos" class="level2">
+<h2 class="anchored" data-anchor-id="interpretación-de-los-modelos">Interpretación de los modelos</h2>
+<p>Luego de ajustar y revisar los diagnósticos de los seis modelos, pasamos a la interpretación de los resultados. En total se ajustaron modelos para tres respuestas:</p>
+<ul>
+<li><p>abundancia total de mosquitos emergidos;</p></li>
+<li><p>abundancia de <em>Aedes aegypti</em>;</p></li>
+<li><p>abundancia de <em>Aedes albopictus</em>.</p></li>
+</ul>
+<p>Para cada respuesta se trabajó con dos líneas de análisis:</p>
+<ul>
+<li><p>modelo de macrohábitat;</p></li>
+<li><p>modelo de microhábitat y condiciones internas del criadero.</p></li>
+</ul>
+<p>Esto dio un total de seis modelos. Interpretar en detalle el <code>summary()</code> de cada uno volvería esta sección muy extensa y repetitiva, porque todos los modelos tienen una estructura similar: parte condicional, parte de inflación de ceros, efecto aleatorio por grilla y coeficientes en escala logarítmica.</p>
+<p>Por eso, primero interpretamos en detalle el modelo de macrohábitat para abundancia total. Este modelo funciona como ejemplo para mostrar cómo se lee la salida de <code>glmmTMB</code>. Luego resumimos los patrones principales de los seis modelos en una tabla comparativa.</p>
+</section>
+<section id="interpretacion-del-modelo-de-macrohabitat-para-abundancia-total" class="level2">
+<h2 class="anchored" data-anchor-id="interpretacion-del-modelo-de-macrohabitat-para-abundancia-total">Interpretacion del modelo de macrohabitat para abundancia total</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(modelo_total_macro)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> Family: nbinom2  ( log )
+Formula:          
+`Total mosquito emerged` ~ Season + Macrohabitat + (1 | Grid_no)
+Zero inflation:                          ~Season
+Data: datos_mod
+
+      AIC       BIC    logLik -2*log(L)  df.resid 
+   1812.7    1887.1    -891.3    1782.7      1037 
+
+Random effects:
+
+Conditional model:
+ Groups  Name        Variance  Std.Dev. 
+ Grid_no (Intercept) 1.272e-08 0.0001128
+Number of obs: 1052, groups:  Grid_no, 48
+
+Dispersion parameter for nbinom2 family (): 0.809 
+
+Conditional model:
+                         Estimate Std. Error z value Pr(&gt;|z|)    
+(Intercept)                1.5826     0.3931   4.026 5.67e-05 ***
+Seasonfeb-march            1.0640     0.3190   3.335 0.000852 ***
+Seasonjuly-september       0.3938     0.2561   1.538 0.124129    
+Seasonoctober-december     0.2910     0.3542   0.822 0.411341    
+MacrohabitatHigh dense    -0.4956     0.3811  -1.300 0.193447    
+MacrohabitatLake          -1.0005     0.4103  -2.439 0.014742 *  
+MacrohabitatLow dense     -0.4235     0.3732  -1.135 0.256567    
+MacrohabitatMedium dense  -0.7050     0.3624  -1.945 0.051718 .  
+MacrohabitatPlantation    -0.5805     0.3808  -1.524 0.127459    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Zero-inflation model:
+                       Estimate Std. Error z value Pr(&gt;|z|)    
+(Intercept)              1.0608     0.2598   4.083 4.44e-05 ***
+Seasonfeb-march          0.3841     0.3149   1.220   0.2226    
+Seasonjuly-september    -0.4934     0.2719  -1.815   0.0696 .  
+Seasonoctober-december   1.4876     0.3413   4.359 1.31e-05 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
+</div>
+</div>
+<p>La parte condicional estima la abundancia esperada de mosquitos emergidos, mientras que la parte de inflación de ceros modela la presencia de ceros adicionales.</p>
+<p>En la parte condicional, la estación <strong>feb-march</strong> tiene un coeficiente positivo y significativo. Esto indica que en esta estación la abundancia esperada es mayor que en la estación de referencia.</p>
+<p>Como el modelo usa link log:</p>
+<p>exp(1.064) = 2.90</p>
+<p><strong>feb-march</strong> tiene una abundancia esperada aproximadamente <strong>2,9 veces mayor</strong> que la estación de referencia (april-june). En porcentaje: 189%</p>
+<p>En cambio, <strong>july-september</strong> y <strong>october-december</strong> tienen un coeficiente positivo pero no significativo, esto significa que el modelo no encuentra evidencia suficiente para afirmar que la abundancia sea diferente a la estación de referencia.</p>
+<p>Para Macrohabitat, el nivel <strong>Lake</strong> aparece con un coeficiente negativo y significativo. Esto indica que, manteniendo constante la estación, los sitios ubicados en macrohábitat tipo lago presentaron menor abundancia que el macrohábitat de referencia.</p>
+<p>exp(-1.0005) = 0.37</p>
+<p>La abundancia esperada en <strong>Lake</strong> es aproximadamente <strong>0,37 veces</strong> la del macrohábitat de referencia. En porcentaje: -63.2%</p>
+<p>Medium dense queda cerca del límite de significancia, entonces no lo interpretamos como un efecto claro.</p>
+<p>El efecto aleatorio de <code>Grid_no</code> tiene una varianza prácticamente nula. Esto indica que las diferencias entre grillas no explican mucha variación adicional una vez consideradas la estación y el macrohábitat.</p>
+<p>En la parte de inflación de ceros, <strong>october-december</strong> tiene un coeficiente positivo y significativo. Esta parte del modelo no habla de abundancia de mosquitos, sino de la aparición de ceros adicionales.</p>
+<p>Como esta parte usa una escala <strong>logit</strong>, al exponenciar el coeficiente obtenemos un <strong>odds ratio</strong>.</p>
+<p>exp(1.4876) = 4.4</p>
+<p>Lo que indica que en october-december los odds de aparecer ceros adicionales son unas 4.4 veces mayores que en la estación de referencia.</p>
+<p><strong>july-september</strong> tiene un coeficiente negativo cercano al límite, lo que podría indicar menos ceros extra, pero no lo tomamos como un resultado claro.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(modelo_total_micro_cond)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> Family: nbinom2  ( log )
+Formula:          
+`Total mosquito emerged` ~ Season + Microhabitat + temp_std +  
+    pH_std + logvol_std + (1 | Grid_no)
+Zero inflation:                          ~Season
+Data: datos_mod
+
+      AIC       BIC    logLik -2*log(L)  df.resid 
+   1808.3    1902.5    -885.1    1770.3      1033 
+
+Random effects:
+
+Conditional model:
+ Groups  Name        Variance  Std.Dev. 
+ Grid_no (Intercept) 9.517e-09 9.755e-05
+Number of obs: 1052, groups:  Grid_no, 48
+
+Dispersion parameter for nbinom2 family (): 0.952 
+
+Conditional model:
+                                 Estimate Std. Error z value Pr(&gt;|z|)    
+(Intercept)                       1.02428    0.40089   2.555 0.010619 *  
+Seasonfeb-march                   1.08278    0.30745   3.522 0.000429 ***
+Seasonjuly-september              0.14740    0.27520   0.536 0.592235    
+Seasonoctober-december           -0.25509    0.38213  -0.668 0.504423    
+MicrohabitatDiscarded containers  0.16389    0.35734   0.459 0.646497    
+MicrohabitatDiscarded tires      -0.46211    0.53344  -0.866 0.386333    
+MicrohabitatGrinding stones       0.61516    0.37566   1.638 0.101513    
+MicrohabitatPots                  0.46263    0.43149   1.072 0.283637    
+MicrohabitatStagnant water       -0.16936    0.62546  -0.271 0.786558    
+MicrohabitatStorage containers    0.25710    0.45855   0.561 0.575021    
+temp_std                         -0.36562    0.12780  -2.861 0.004223 ** 
+pH_std                            0.07097    0.07833   0.906 0.364943    
+logvol_std                       -0.18072    0.15275  -1.183 0.236763    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Zero-inflation model:
+                       Estimate Std. Error z value Pr(&gt;|z|)    
+(Intercept)              1.0453     0.2664   3.923 8.73e-05 ***
+Seasonfeb-march          0.4321     0.3172   1.362    0.173    
+Seasonjuly-september    -0.4285     0.2713  -1.579    0.114    
+Seasonoctober-december   1.5416     0.3426   4.500 6.79e-06 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
+</div>
+</div>
+<p>La parte condicional estima la abundancia esperada de mosquitos emergidos, mientras que la parte de inflación de ceros modela la presencia de ceros adicionales.</p>
+<p>En la parte condicional, la estación feb-march tiene un coeficiente positivo y significativo. Esto indica que en esta estación la abundancia esperada es mayor que en la estación de referencia.</p>
+<p>Como el modelo usa link log:</p>
+<p>exp(1.08278) = 2.95</p>
+<p><strong>feb-march</strong> tiene una abundancia esperada aproximadamente 2,95 veces mayor que la estación de referencia (april-june). En porcentaje: 195%.</p>
+<p>En cambio, july-september tiene un coeficiente positivo pero no significativo, y october-december tiene un coeficiente negativo pero no significativo. Esto significa que el modelo no encuentra evidencia suficiente para afirmar que la abundancia sea diferente a la estación de referencia en esas dos estaciones.</p>
+<p>Para Microhabitat, ningún nivel aparece con p-valor menor a 0.05. Esto significa que, en este modelo, no encontramos evidencia suficiente para afirmar que algún tipo de microhábitat tenga una abundancia esperada diferente al microhábitat de referencia.</p>
+<p><strong>Grinding stones</strong> tiene un coeficiente positivo y queda relativamente cerca del límite, pero como el p-valor es mayor a 0.05, no lo interpretamos como un efecto claro.</p>
+<p>Entre las condiciones del criadero, <strong>temp_std</strong> tiene un coeficiente negativo y significativo. Esto indica que, a mayor temperatura estandarizada, la abundancia esperada de mosquitos emergidos disminuye.</p>
+<p>Como el modelo usa link log:</p>
+<p>exp(-0.36562) = 0.69</p>
+<p>Esto significa que, por cada aumento de una unidad estandarizada en temperatura, la abundancia esperada queda aproximadamente en 0,69 veces el valor anterior. En porcentaje: -30.6%.</p>
+<p>En cambio, pH_std y logvol_std no son significativos. Esto significa que el modelo no encuentra evidencia suficiente para afirmar que el pH o el volumen tengan una relación clara con la abundancia total en este modelo.</p>
+<p>El efecto aleatorio de Grid_no tiene una varianza prácticamente nula. Esto indica que las diferencias entre grillas no explican mucha variación adicional una vez consideradas la estación, el microhábitat y las condiciones del criadero.</p>
+<p>En la parte de inflación de ceros, october-december tiene un coeficiente positivo y significativo. Esta parte del modelo no habla de abundancia de mosquitos, sino de la aparición de ceros adicionales.</p>
+<p>Como esta parte usa una escala logit, al exponenciar el coeficiente obtenemos un odds ratio.</p>
+<p>exp(1.5416) = 4.67</p>
+<p>Lo que indica que en october-december los odds de aparecer ceros adicionales son unas 4.67 veces mayores que en la estación de referencia.</p>
+<p>july-september tiene un coeficiente negativo, pero no significativo. Entonces no lo tomamos como un resultado claro.</p>
+</section>
+<section id="resumen-comparativo-de-los-seis-modelos" class="level2">
+<h2 class="anchored" data-anchor-id="resumen-comparativo-de-los-seis-modelos">Resumen comparativo de los seis modelos</h2>
+<p>Como se ajustaron seis modelos, interpretar todos los coeficientes en detalle volvería la sección muy extensa y repetitiva. Por eso, después de revisar los <code>summary()</code> completos, resumimos los patrones principales en una tabla comparativa.</p>
+<p>La tabla se enfoca en la parte condicional de los modelos, porque esa parte estima la abundancia esperada. La parte de inflación de ceros se usó para mejorar el ajuste frente al exceso de ceros observado, pero no se tomó como eje principal de interpretación aplicada.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 4%">
+<col style="width: 5%">
+<col style="width: 24%">
+<col style="width: 34%">
+<col style="width: 29%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Rta</th>
+<th>Modelo</th>
+<th>Estación</th>
+<th>Hábitat</th>
+<th>Var. amb.</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Total</td>
+<td>Macro</td>
+<td><strong>feb-march</strong> mostró mayor abundancia esperada que la estación de referencia.</td>
+<td><strong>Lake</strong> mostró menor abundancia esperada que el macrohábitat de referencia.</td>
+<td>No incluidas.</td>
+</tr>
+<tr class="even">
+<td>Total</td>
+<td>Micro + ambiente</td>
+<td><strong>feb-march</strong> volvió a mostrar mayor abundancia esperada.</td>
+<td>No hubo diferencias claras entre microhábitats. <strong>Grinding stones</strong> quedó cerca, pero sin evidencia suficiente.</td>
+<td><p>La temperatura mostró un efecto negativo.</p>
+<p>pH y volumen no mostraron efectos claros.</p></td>
+</tr>
+<tr class="odd">
+<td><em>Aegypti</em></td>
+<td>Macro</td>
+<td><strong>feb-march</strong> mostró mayor abundancia esperada.</td>
+<td><strong>Lake</strong> mostró menor abundancia esperada.</td>
+<td>No incluidas.</td>
+</tr>
+<tr class="even">
+<td><em>Aegypti</em></td>
+<td>Micro + ambiente</td>
+<td>No hubo diferencias estacionales claras.</td>
+<td><strong>Grinding stones</strong> mostró una abundancia esperada mucho mayor que el microhábitat de referencia.</td>
+<td>Temperatura, pH y volumen no mostraron efectos claros.</td>
+</tr>
+<tr class="odd">
+<td><em>Albopictus</em></td>
+<td>Macro</td>
+<td>No hubo diferencias estacionales claras.</td>
+<td><strong>High dense</strong> mostró menor abundancia esperada que el macrohábitat de referencia.</td>
+<td>No incluidas.</td>
+</tr>
+<tr class="even">
+<td><em>Albopictus</em></td>
+<td>Micro + ambiente</td>
+<td>No hubo diferencias estacionales claras.</td>
+<td>No hubo diferencias claras entre microhábitats. <strong>Pots</strong> quedó cerca, pero sin evidencia suficiente.</td>
+<td>El pH tuvo efecto positivo y el volumen efecto negativo. Temperatura no mostró efecto claro.</td>
+</tr>
+</tbody>
+</table>
+<p>Al comparar los seis modelos juntos, aparece una idea bastante clara: la abundancia total y la abundancia de <em>Aedes aegypti</em> muestran una señal estacional más marcada, sobre todo en <strong>feb-march</strong>. En cambio, para <em>Aedes albopictus</em> no aparece una diferencia clara entre estaciones.</p>
+<p>También se ve que los resultados cambian cuando pasamos de la abundancia total a cada especie por separado. Esto tiene sentido, porque al separar por especie hay menos conteos positivos y aumenta mucho la cantidad de ceros. Por eso, los modelos de <em>Aedes aegypti</em> y especialmente de <em>Aedes albopictus</em> deben leerse con más cuidado que el modelo de abundancia total.</p>
+<hr>
+</section>
+<section id="resultados-interpretables-con-emmeans" class="level2">
+<h2 class="anchored" data-anchor-id="resultados-interpretables-con-emmeans">Resultados interpretables con emmeans</h2>
+<p>A partir de los modelos ajustados, usamos emmeans para obtener abundancias esperadas en escala de respuesta. Esto permite interpretar los resultados como número esperado de mosquitos, en lugar de trabajar directamente con coeficientes en escala logarítmica.</p>
+<p>Nos enfocamos en dos preguntas:</p>
+<ol type="1">
+<li><p>¿En qué estación se espera mayor abundancia de mosquitos?</p></li>
+<li><p>¿En qué tipo de microhábitat se espera mayor abundancia?</p></li>
+</ol>
+<p>Estas preguntas son útiles para interpretar el problema desde una mirada ecológica y sanitaria, porque permiten pensar cúando y dónde podrían concentrarse los criaderos más productivos.</p>
+<section id="abundancia-esperada-por-estación-y-especie" class="level3">
+<h3 class="anchored" data-anchor-id="abundancia-esperada-por-estación-y-especie">Abundancia esperada por estación y especie</h3>
+<p>Este gráfico permite comparar si el patrón estacional es parecido entre la abundancia total y las especies principales.</p>
+<p>Las estimaciones de <strong>emmeans</strong> se interpretan como abundancia esperada de mosquitos emergidos por criadero, ya que la unidad de análisis del modelo es cada criadero registrado en la base.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="modelado_abundancia_aedes_v3_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>En la abundancia total se observa una mayor abundancia esperada en feb-march. Este patrón también aparece para <em>Aedes aegypti</em>, aunque con más incertidumbre. En <em>Aedes albopictus</em>, el patrón estacional es menos claro.</p>
+<p>Esto indica que la señal estacional parece estar más asociada a la abundancia total y a <em>Aedes aegypti</em> que a <em>Aedes albopictus</em>.</p>
+</section>
+<section id="abundancia-esperada-por-microhábitat-y-especie" class="level3">
+<h3 class="anchored" data-anchor-id="abundancia-esperada-por-microhábitat-y-especie">Abundancia esperada por microhábitat y especie</h3>
+<p>Después estimamos la abundancia esperada por tipo de microhábitat. Esta comparación permite mirar qué tipo de criadero parece más favorable para la emergencia de mosquitos.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="modelado_abundancia_aedes_v3_files/figure-html/unnamed-chunk-23-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>El resultado más marcado aparece en <em>Aedes aegypti</em>, donde Grinding stones muestra mayor abundancia esperada. En la abundancia total, las diferencias entre microhábitats no son tan claras. En <em>Aedes albopictus</em>, tampoco aparecen diferencias fuertes entre microhábitats, aunque Pots queda como una categoría a observar.</p>
+</section>
+<section id="variables-ambientales" class="level3">
+<h3 class="anchored" data-anchor-id="variables-ambientales">Variables ambientales</h3>
+<p>Además de estación y microhábitat, los modelos incluyeron temperatura, pH y volumen transformado. Estos efectos no fueron iguales para todas las respuestas.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 26%">
+<col style="width: 23%">
+<col style="width: 23%">
+<col style="width: 23%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Respuesta</th>
+<th>Temperatura</th>
+<th>pH</th>
+<th>Volumen</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Abundancia total</td>
+<td>Efecto negativo</td>
+<td>Sin efecto claro</td>
+<td>Sin efecto claro</td>
+</tr>
+<tr class="even">
+<td><em>Aedes aegypti</em></td>
+<td>Sin efecto claro</td>
+<td>Sin efecto claro</td>
+<td>Sin efecto claro</td>
+</tr>
+<tr class="odd">
+<td><em>Aedes albopictus</em></td>
+<td>Sin efecto claro</td>
+<td>Efecto positivo</td>
+<td>Efecto negativo</td>
+</tr>
+</tbody>
+</table>
+<p>Para la abundancia total, la temperatura mostró un efecto negativo. Para <em>Aedes aegypti</em>, ninguna de las variables ambientales mostró un efecto claro. Para <em>Aedes albopictus</em>, el pH mostró un efecto positivo y el volumen un efecto negativo.</p>
+<p>Esto indica que las variables ambientales no tuvieron un patrón único para todas las respuestas.</p>
+<hr>
+</section>
+</section>
+</section>
+<section id="conclusiones-del-modelado" class="level1">
+<h1>Conclusiones del modelado</h1>
+<p>La señal más clara apareció en la abundancia total y en <em>Aedes aegypti</em>. En ambos casos, la mayor abundancia esperada se concentró en <code>feb-march</code>. Esto indica que la estacionalidad parece ser un factor importante, especialmente para la abundancia total y para <em>Aedes aegypti</em>.</p>
+<p>Al analizar los microhábitats, el patrón más marcado apareció en <em>Aedes aegypti</em>. En esta especie, <code>Grinding stones</code> fue el microhábitat con mayor abundancia esperada. Este resultado es importante porque apunta a un tipo concreto de criadero que podría tener mayor relevancia para la producción de mosquitos.</p>
+<p>En <em>Aedes albopictus</em>, los patrones por estación y microhábitat fueron menos claros. En cambio, en el modelo con condiciones internas del criadero aparecieron señales asociadas al pH y al volumen: el pH tuvo un efecto positivo y el volumen un efecto negativo. Estos resultados deben interpretarse con cautela, porque esta especie presentó muchos ceros y menor cantidad de registros positivos.</p>
+<p>Las variables ambientales no mostraron un patrón común para todas las respuestas. La temperatura apareció con efecto negativo en la abundancia total, pero no en las especies por separado. Para <em>Aedes aegypti</em> no se encontraron efectos claros de temperatura, pH o volumen en el modelo microambiental.</p>
+<p>La parte de inflación de ceros fue útil para mejorar el ajuste de los modelos, pero no fue el eje principal de la interpretación aplicada. Para discutir resultados priorizamos la parte condicional, porque responde directamente la pregunta de interés: cuántos mosquitos se esperan según estación, especie y tipo de criadero.</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

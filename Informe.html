@@ -194,12 +194,111 @@ family = nbinom2</code></pre>
 </section>
 <section id="diagnóstico-de-modelos" class="level2">
 <h2 class="anchored" data-anchor-id="diagnóstico-de-modelos">5. Diagnóstico de modelos</h2>
+<p>Luego del ajuste de los seis modelos finales, revisamos los residuos simulados con DHARMa.</p>
+<p>Como se ajustaron seis modelos, en el informe resumimos los diagnósticos en una tabla general y la siguiente imágen muestra un gráfico representativo. En este caso se trata del diagnóstico del modelo Macrohabitat para la abundancia total.</p>
+<p>Los gráficos completos de residuos se dejan en QMD del modelado de abundancia includo en el anexo del informe.</p>
+<p><img src="images/clipboard-605720505.png" class="img-fluid"></p>
+<p>Figura : Diagnostico con DHARMa del modelo macrohabitat de abundancia total</p>
+<section id="tabla-resumen-de-diagnosticos-por-dharma-de-los-6-modelos" class="level3">
+<h3 class="anchored" data-anchor-id="tabla-resumen-de-diagnosticos-por-dharma-de-los-6-modelos">Tabla resumen de diagnosticos por DHARMa de los 6 modelos</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Respuesta</th>
+<th>Modelo</th>
+<th>Uniformidad</th>
+<th>Dispersión</th>
+<th>Exceso de ceros</th>
+<th>Lectura general</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Total</td>
+<td>Macro</td>
+<td>ok</td>
+<td>ok</td>
+<td>ok</td>
+<td>ajuste razonable</td>
+</tr>
+<tr class="even">
+<td>Total</td>
+<td>Micro + ambiente</td>
+<td>ok</td>
+<td>ok</td>
+<td>ok</td>
+<td>ajuste razonable</td>
+</tr>
+<tr class="odd">
+<td><em>Aedes aegypti</em></td>
+<td>Macro</td>
+<td>ok</td>
+<td>ok</td>
+<td>ok</td>
+<td>ajuste razonable</td>
+</tr>
+<tr class="even">
+<td><em>Aedes aegypti</em></td>
+<td>Micro + ambiente</td>
+<td>ok</td>
+<td>leve señal / ok</td>
+<td>ok</td>
+<td>ajuste aceptable</td>
+</tr>
+<tr class="odd">
+<td><em>Aedes albopictus</em></td>
+<td>Macro</td>
+<td>ok</td>
+<td>ok</td>
+<td>ok</td>
+<td>ajuste razonable</td>
+</tr>
+<tr class="even">
+<td><em>Aedes albopictus</em></td>
+<td>Micro + ambiente</td>
+<td>ok</td>
+<td>ok</td>
+<td>ok</td>
+<td>ajuste razonable</td>
+</tr>
+</tbody>
+</table>
+<p>Tabla: Resumen de los diagnósticos por DHARMa de los 6 modelos</p>
+<p>En términos generales, los diagnósticos no mostraron problemas suficientemente graves como para descartar la estrategia de modelado elegida. Por eso continuamos con la interpretación de los modelos ZINB.</p>
 </section>
-<section id="resultados-principales" class="level2">
-<h2 class="anchored" data-anchor-id="resultados-principales">6. Resultados principales</h2>
 </section>
-<section id="section" class="level2">
-<h2 class="anchored" data-anchor-id="section"></h2>
+</section>
+<section id="resultados-principales" class="level1">
+<h1>6. Resultados principales</h1>
+<p>Una vez ajustados y diagnosticados los modelos, el paso siguiente fue interpretar los resultados en una escala más clara. Los <code>summary()</code> de los modelos permiten revisar coeficientes, dirección de los efectos y significancia, pero esos coeficientes están en escala logarítmica. Por eso no son la forma más directa de comunicar los resultados.</p>
+<p>Para facilitar la interpretación usamos <strong>emmeans</strong>, que permite obtener medias estimadas en escala de respuesta. En este caso, las estimaciones se interpretan como abundancia esperada de mosquitos emergidos por criadero.</p>
+<p>Nos enfocamos en dos preguntas aplicadas:</p>
+<ol type="1">
+<li>¿En qué estación se espera mayor abundancia de mosquitos?</li>
+<li>¿En qué tipo de microhábitat se espera mayor abundancia?</li>
+</ol>
+<p>Estas preguntas son útiles porque permiten pasar del modelo estadístico a una lectura ecológica y sanitaria: cuándo aparecen más mosquitos y qué tipos de criaderos podrían ser más productivos.</p>
+<section id="abundancia-esperada-por-estación-y-especie" class="level3">
+<h3 class="anchored" data-anchor-id="abundancia-esperada-por-estación-y-especie">6.1 Abundancia esperada por estación y especie</h3>
+<p><img src="images/clipboard-4242840250.png" class="img-fluid"></p>
+<p>La abundancia esperada por estación mostró que el patrón más claro aparece en la abundancia total y en <em>Aedes aegypti</em>. En ambos casos, <code>feb-march</code> presentó los valores esperados más altos.</p>
+<p>En <em>Aedes albopictus</em>, el patrón estacional fue menos claro. Esto coincide con lo observado en los modelos: al separar por especie aumenta la proporción de ceros y las estimaciones se vuelven más inciertas.</p>
+<p>Este resultado indica que la estación parece ser un factor importante para la abundancia total y para <em>Aedes aegypti</em>, pero no se observa con la misma claridad en <em>Aedes albopictus</em>.</p>
+</section>
+<section id="abundancia-esperada-por-microhábitat-y-especie" class="level3">
+<h3 class="anchored" data-anchor-id="abundancia-esperada-por-microhábitat-y-especie">6.2 Abundancia esperada por microhábitat y especie</h3>
+<p><img src="images/clipboard-3710672220.png" class="img-fluid"></p>
+<p>Al analizar los microhábitats, el resultado más marcado aparece en <em>Aedes aegypti</em>. En esta especie, <code>Grinding stones</code> presentó la mayor abundancia esperada.</p>
+<p>Para la abundancia total, las diferencias entre microhábitats fueron menos claras. En <em>Aedes albopictus</em> tampoco apareció un microhábitat claramente dominante, aunque algunas categorías mostraron valores más altos con mayor incertidumbre.</p>
+<p>Este gráfico es importante porque permite identificar tipos concretos de criaderos que podrían ser más relevantes para la producción de mosquitos.</p>
 </section>
 <section id="conclusiones-del-modelado-de-abundancia" class="level2">
 <h2 class="anchored" data-anchor-id="conclusiones-del-modelado-de-abundancia">7. Conclusiones del modelado de abundancia</h2>
@@ -232,6 +331,9 @@ family = nbinom2</code></pre>
 <p>Este recorrido muestra que la abundancia total permite ver el patrón general, pero que separar por especie aporta información más específica. Al mismo tiempo, al separar por especie aumentan los ceros y la incertidumbre, por lo que las conclusiones sobre <em>Aedes aegypti</em> y especialmente sobre <em>Aedes albopictus</em> deben leerse con más cautela.</p>
 </section>
 </section>
+</section>
+<section id="anexos" class="level1">
+<h1>8. Anexos</h1>
 </section>
 
 </main>

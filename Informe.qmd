@@ -82,11 +82,11 @@ La comparación se hizo usando los mismos predictores y cambiando solo la famili
 
 La fórmula base usada para esta comparación fue:
 
-respuesta \~ Season + temp_std + pH_std + logvol_std + (1 \| Grid_no)
+`respuesta ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no)`
 
 En los modelos inflados en ceros se agregó:
 
-ziformula = \~ Season
+`ziformula = ~ Season`
 
 Esto significa que la parte de inflación de ceros se modeló en función de la estación.
 
@@ -104,7 +104,7 @@ La comparación inicial se hizo para las tres respuestas: abundancia total, *Aed
 
 Tabla 1. Comparación de distintas familas de modelos
 
-Los modelos binomiales negativos inflados en ceros tuvieron el menor AIC en las tres respuestas. Por eso, para continuar el análisis usamos modelos ZINB.
+En las tres respuestas, el menor AIC correspondió al modelo binomial negativo inflado en ceros (ZIMB). Esto indicó que, para estos datos, el modelo ZINB representaba mejor la combinación de sobredispersión y exceso de ceros. Por eso usamos esta familia de modelos para continuar el análisis.
 
 ### 4.3. Dos líneas de análisis: macrohábitat y microhábitat
 
@@ -130,7 +130,7 @@ ziformula = ~ Season
 family = nbinom2
 ```
 
-En esta versión, el modelo de macrohábitat no incluye temperatura, pH ni volumen, porque esas variables describen condiciones medidas dentro del criadero. Por eso las analizamos en la línea de microhábitat.
+El modelo de macrohábitat no incluye temperatura, pH ni volumen, porque esas variables describen condiciones medidas dentro del criadero. Por eso las analizamos en la línea de microhábitat.
 
 ### 4.4. Efecto aleatorio por grilla
 
@@ -143,6 +143,18 @@ En los modelos se incluyó `Grid_no` como efecto aleatorio:
 La razón es que las observaciones no son completamente independientes. Varios criaderos pertenecen a una misma grilla y pueden compartir condiciones espaciales o ambientales. Entonces, el efecto aleatorio permite representar esa estructura agrupada.
 
 En algunos modelos la varianza asociada a `Grid_no` fue muy baja. Aun así, su inclusión tuvo sentido porque responde al diseño del muestreo.
+
+### 4.5. Diagnóstico e interpretación
+
+Después de ajustar cada modelo revisamos los residuos con DHARMa. Esta revisión fue necesaria porque no alcanza con mirar solo el AIC. Un modelo puede tener buen AIC y aun así mostrar problemas en los residuos.
+
+Luego interpretamos los modelos usando dos herramientas:
+
+-   `summary()`, para revisar coeficientes, dirección de los efectos y significancia;
+
+-   `emmeans`, para obtener medias estimadas y contrastes en una escala más fácil de interpretar.
+
+Esto fue importante porque los modelos usan enlace log. Entonces, los coeficientes del `summary()` están en escala logarítmica. Para comunicar los resultados de forma más clara, usamos medias esperadas, razones entre medias e intervalos de confianza.
 
 ## 5. Diagnóstico de modelos
 

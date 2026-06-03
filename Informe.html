@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.37">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Modelado de abundancia de mosquitos Aedes en criaderos urbanos de Bengaluru, India</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="Informe_files/libs/clipboard/clipboard.min.js"></script>
+<script src="Informe_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="Informe_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="Informe_files/libs/quarto-html/popper.min.js"></script>
+<script src="Informe_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="Informe_files/libs/quarto-html/anchor.min.js"></script>
+<link href="Informe_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="Informe_files/libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="Informe_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="Informe_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="Informe_files/libs/bootstrap/bootstrap-b19b4a5815678352e0eaebd94051d641.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Modelado de abundancia de mosquitos Aedes en criaderos urbanos de Bengaluru, India</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="modelado-de-abundancia-de-mosquitos-aedes-en-criaderos-urbanos-de-bengaluru-india" class="level1">
+<h1>Modelado de abundancia de mosquitos <em>Aedes</em> en criaderos urbanos de Bengaluru, India</h1>
+<section id="introducción" class="level2">
+<h2 class="anchored" data-anchor-id="introducción">1. Introducción</h2>
+<p>Dharmamuthuraja D, P. D. R, Lakshmi M. I, Isvaran K, Ghosh SK, Ishtiaq F (2023) Determinants of Aedes mosquito larval ecology in a heterogeneous urban environment- a longitudinal study in Bengaluru, India. PLoS Negl Trop Dis 17(11): e0011702. <a href="https://doi.org/10.1371/journal.pntd.0011702" class="uri">https://doi.org/10.1371/journal.pntd.0011702</a></p>
+<p>Este paper analiza cómo el ambiente urbano influye en la presencia de mosquitos del género Aedes, en la ciudad de Bengaluru, India.</p>
+<p>El trabajo permite identificar qué factores del entorno (lugar, recipientes con agua o la época del año) influyen en la aparición y cantidad de mosquitos. Además, considera tanto las características generales de la ciudad como los lugares específicos donde se acumula agua, lo que ayuda a entender mejor el problema.</p>
+<p>Desde el punto de vista social, el estudio es importante porque muestra que muchos criaderos de mosquitos son generados por las personas, por ejemplo a través de recipientes o residuos con agua acumulada. Esto indica que el riesgo de dengue no depende solo de factores naturales, sino también de cómo está organizado el entorno urbano y de las prácticas de la población.</p>
+<p>El estudio es de tipo observacional, ya que los investigadores no manipulan las variables, sino que registran lo que ocurre en el ambiente natural. Además, es un estudio longitudinal, porque se desarrolla a lo largo del tiempo (entre 2021 y 2022) para analizar cómo varía la presencia de mosquitos según la estación del año.</p>
+<p>El muestreo se realizó mediante grillas distribuidas en la ciudad, que representan distintos tipos de ambientes, como zonas urbanas de distinta densidad, plantaciones, lagos y zonas baldías. Dentro de cada grilla se identificaron y analizaron los microhábitats (recipientes con agua) donde pueden desarrollarse las larvas.</p>
+<hr>
+</section>
+<section id="como-está-compuesta-la-base" class="level2">
+<h2 class="anchored" data-anchor-id="como-está-compuesta-la-base">2. Como está compuesta la base</h2>
+<p>Los autores realizaron un muestreo sistemático de recipientes con agua distribuidos en diferentes sectores de la ciudad. Para cada criadero registraron características ambientales y fisico-químicas, entre ellas el tipo de hábitat, el volumen de agua, la temperatura, el pH y otras variables relacionadas con las condiciones del sitio. Además, se cuantificó la cantidad de mosquitos emergidos y se identificaron las especies presentes, principalmente <em>Aedes aegypti</em> y <em>Aedes albopictus</em>.</p>
+<p>La base de datos original contiene información de más de mil observaciones correspondientes a recipientes inspeccionados en distintos momentos del año. Cada registro representa un criadero individual y reúne tanto variables explicativas asociadas al ambiente como variables de respuesta relacionadas con la abundancia de mosquitos.</p>
+<p>Debido a que el estudio fue realizado en diferentes estaciones del año y en distintos tipos de hábitats, la base permite explorar cómo las condiciones ambientales y las características de los criaderos se relacionan con la presencia y la abundancia de mosquitos. Asimismo, incluye una estructura jerárquica de muestreo, ya que varios criaderos fueron relevados dentro de las mismas celdas espaciales utilizadas por los autores para organizar el estudio.</p>
+<p>En este informe se utiliza la base de datos del artículo como punto de partida para desarrollar un recorrido propio de análisis estadístico. El objetivo no es reproducir exactamente los resultados publicados, sino aprovechar la información disponible para explorar distintas estrategias de modelado y profundizar en la interpretación de los patrones observados en los datos.</p>
+<hr>
+</section>
+<section id="análisis-exploratorio" class="level2">
+<h2 class="anchored" data-anchor-id="análisis-exploratorio">3. Análisis exploratorio</h2>
+<p>El análisis exploratorio se realizó siguiendo el protocolo propuesto por Zuur, con el objetivo de revisar la calidad de la base, conocer la distribución de las variables y detectar posibles problemas antes de avanzar con los modelos.</p>
+<p>Primero se filtró la base para trabajar solo con criaderos activos, es decir, aquellos que tenían agua registrada (log volume &gt; 0), y con los datos longitudinales correspondientes a las grillas de tipo Index. Esta decisión fue importante porque los recipientes sin agua no representan criaderos activos y podían generar ceros que no correspondían al proceso biológico que nos interesaba modelar.</p>
+<p>Para el análisis se seleccionaron tres variables respuesta de abundancia: abundancia total de mosquitos emergidos, abundancia de <em>Aedes aegypti</em> y abundancia de <em>Aedes albopictus</em>. Como variables explicativas se consideraron la estación del año, el microhábitat, el macrohábitat, la temperatura, el pH y el logaritmo del volumen de agua.</p>
+<p>En la exploración inicial se observó que las variables de abundancia tenían una gran cantidad de ceros. Los valores fueron altos: aproximadamente 83% de ceros para la abundancia total, 92% para <em>Aedes aegypti</em> y 95% para <em>Aedes albopictus</em>. Esto mostró que el exceso de ceros era una característica central de los datos y no un detalle menor. Además, las distribuciones fueron muy asimétricas, con muchos valores en cero y pocos criaderos con abundancias altas.</p>
+<p>Después se analizó la distribución de los valores positivos de abundancia. Esta mirada permitió observar mejor qué ocurría cuando efectivamente emergían mosquitos. Se encontraron diferencias entre estaciones y entre especies: la abundancia total mostró mayor dispersión en algunas estaciones, especialmente en feb–march y july–september. <em>Aedes aegypti</em> presentó un patrón parecido al total, mientras que <em>Aedes albopictus</em> mostró una distribución más concentrada y con presencia más marcada en april–june. Esto indicó que las especies no se comportan igual y que era conveniente modelarlas por separado.</p>
+<p>Un punto importante fue la interpretación de los ceros. Como ya se habían eliminado los recipientes sin agua, los ceros restantes corresponden a criaderos con agua donde no emergieron mosquitos. Por eso no pueden considerarse simples errores o recipientes inactivos. Son ceros biológicamente relevantes, que pueden deberse a condiciones desfavorables del criadero o a variabilidad propia del proceso ecológico.</p>
+<p>Luego se evaluó la colinealidad entre las variables continuas: temperatura, pH y log volume. Las correlaciones fueron bajas, menores a 0.3, y los valores de VIF estuvieron cerca de 1. Esto indicó que no había un problema importante de colinealidad, por lo que estas variables podían considerarse juntas en los modelos.</p>
+<p>También se exploró la relación entre las abundancias y las variables ambientales. En general, las respuestas no mostraron patrones lineales simples. Las abundancias tendieron a concentrarse en ciertos rangos de temperatura y volumen, y los patrones no fueron iguales para las dos especies principales. Esto reforzó la idea de que los datos tenían una estructura compleja y que no era adecuado analizarlos con modelos lineales simples.</p>
+<p>Por último, se revisó el supuesto de independencia. Las observaciones no son completamente independientes porque se tomaron múltiples mediciones dentro de una misma grilla, y cada grilla fue visitada en distintas estaciones del año. Esto genera una estructura agrupada de los datos, por lo que en el modelado posterior se consideró necesario incluir efectos aleatorios.</p>
+<p>En conjunto, el análisis exploratorio mostró que los datos de abundancia son conteos, tienen exceso de ceros, fuerte asimetría y dependencia espacial o agrupada por grilla. Por eso, el AE orientó el análisis hacia modelos para conteos, especialmente binomial negativa, con posibilidad de incorporar inflación de ceros y estructura aleatoria.</p>
+<p><img src="images/clipboard-3719646126.png" class="img-fluid"></p>
+<p><strong>Figura 1. Proporción de ceros en las variables de abundancia</strong></p>
+<hr>
+</section>
+<section id="modelado-de-abundancia" class="level2">
+<h2 class="anchored" data-anchor-id="modelado-de-abundancia">4. Modelado de abundancia</h2>
+<p>A partir del análisis exploratorio, el paso siguiente fue ajustar modelos que fueran coherentes con el tipo de datos que teníamos. Las tres variables respuesta eran conteos: abundancia total de mosquitos emergidos, abundancia de <em>Aedes aegypti</em> y abundancia de <em>Aedes albopictus</em>.</p>
+<section id="estrategia-de-modelado" class="level3">
+<h3 class="anchored" data-anchor-id="estrategia-de-modelado">4.1 Estrategia de modelado</h3>
+<p>El análisis se organizó en dos etapas. Primero comparamos distintas familias de modelos para decidir cuál representaba mejor los datos de abundancia. Se compararon tres opciones: Poisson, binomial negativo y binomial negativo inflado en ceros.</p>
+<p>Después, una vez elegida la familia más adecuada, ajustamos modelos separados para macrohábitat y para microhábitat con condiciones internas del criadero.</p>
+<p>El macrohábitat habla del ambiente urbano general donde está el criadero. El microhábitat y las condiciones internas hablan más directamente del recipiente y del agua donde se desarrollan las larvas.</p>
+<p><img src="images/clipboard-1949355639.png" class="img-fluid"></p>
+<p><strong>Figura 2: Estrategía de modelado</strong></p>
+</section>
+<section id="selección-inicial-de-la-familia-de-modelos" class="level3">
+<h3 class="anchored" data-anchor-id="selección-inicial-de-la-familia-de-modelos">4.2. Selección inicial de la familia de modelos</h3>
+<p>La comparación se hizo usando los mismos predictores y cambiando solo la familia del modelo. Esto nos permitió evaluar qué tipo de distribución representaba mejor la respuesta, sin mezclar esta decisión con cambios en las covariables.</p>
+<p>La fórmula base usada para esta comparación fue:</p>
+<p><code>respuesta ~ Season + temp_std + pH_std + logvol_std + (1 | Grid_no)</code></p>
+<p>En los modelos inflados en ceros se agregó:</p>
+<p><code>ziformula = ~ Season</code></p>
+<p>Esto significa que la parte de inflación de ceros se modeló en función de la estación.</p>
+<p>La parte condicional del modelo estima cuántos mosquitos se esperan en cada criadero. Esta parte también puede producir ceros, porque un criadero puede tener agua y aun así no producir mosquitos. La parte de inflación de ceros se agrega cuando aparecen más ceros de los que el modelo de conteo puede manejar bien.</p>
+<section id="comparación-por-aic" class="level4">
+<h4 class="anchored" data-anchor-id="comparación-por-aic">Comparación por AIC</h4>
+<p>La comparación inicial se hizo para las tres respuestas: abundancia total, <em>Aedes aegypti</em> y <em>Aedes albopictus</em>.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Respuesta</th>
+<th>Poisson</th>
+<th>Binomial negativa</th>
+<th>ZINB</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Total mosquito emerged</td>
+<td>4123</td>
+<td>1850</td>
+<td>1804</td>
+</tr>
+<tr class="even">
+<td>Aedes aegypti</td>
+<td>2721</td>
+<td>1067</td>
+<td>1059</td>
+</tr>
+<tr class="odd">
+<td>Aedes albopictus</td>
+<td>1329</td>
+<td>584</td>
+<td>568</td>
+</tr>
+</tbody>
+</table>
+<p>Tabla 1. Comparación de distintas familas de modelos</p>
+<p>En las tres respuestas, el menor AIC correspondió al modelo binomial negativo inflado en ceros (ZIMB). Esto indicó que, para estos datos, el modelo ZINB representaba mejor la combinación de sobredispersión y exceso de ceros. Por eso usamos esta familia de modelos para continuar el análisis.</p>
+</section>
+</section>
+<section id="dos-líneas-de-análisis-macrohábitat-y-microhábitat" class="level3">
+<h3 class="anchored" data-anchor-id="dos-líneas-de-análisis-macrohábitat-y-microhábitat">4.3. Dos líneas de análisis: macrohábitat y microhábitat</h3>
+<p>Una vez elegida la familia ZINB, separamos el modelado en dos líneas.</p>
+<p>La primera línea fue el modelo de macrohábitat. Este modelo pregunta si la abundancia cambia según el tipo de ambiente urbano o vecindario donde se encuentra el criadero. No intenta explicar el detalle del recipiente, sino el contexto general.</p>
+<p>La estructura general fue:</p>
+<pre><code>respuesta ~ Season + Macrohabitat + (1 | Grid_no)
+ziformula = ~ Season
+family = nbinom2</code></pre>
+<p>La segunda línea fue el modelo de microhábitat más condiciones del criadero. Este modelo mira el tipo de recipiente y las condiciones internas del agua: temperatura, pH y volumen transformado.</p>
+<p>La estructura general fue:</p>
+<pre><code>respuesta ~ Season + Microhabitat + temp_std + pH_std + logvol_std + (1 | Grid_no)
+ziformula = ~ Season
+family = nbinom2</code></pre>
+<p>El modelo de macrohábitat no incluye temperatura, pH ni volumen, porque esas variables describen condiciones medidas dentro del criadero. Por eso las analizamos en la línea de microhábitat.</p>
+</section>
+<section id="efecto-aleatorio-por-grilla" class="level3">
+<h3 class="anchored" data-anchor-id="efecto-aleatorio-por-grilla">4.4. Efecto aleatorio por grilla</h3>
+<p>En los modelos se incluyó <code>Grid_no</code> como efecto aleatorio:</p>
+<pre><code>(1 | Grid_no)</code></pre>
+<p>La razón es que las observaciones no son completamente independientes. Varios criaderos pertenecen a una misma grilla y pueden compartir condiciones espaciales o ambientales. Entonces, el efecto aleatorio permite representar esa estructura agrupada.</p>
+<p>En algunos modelos la varianza asociada a <code>Grid_no</code> fue muy baja. Aun así, su inclusión tuvo sentido porque responde al diseño del muestreo.</p>
+</section>
+<section id="diagnóstico-e-interpretación" class="level3">
+<h3 class="anchored" data-anchor-id="diagnóstico-e-interpretación">4.5. Diagnóstico e interpretación</h3>
+<p>Después de ajustar cada modelo revisamos los residuos con DHARMa. Esta revisión fue necesaria porque no alcanza con mirar solo el AIC. Un modelo puede tener buen AIC y aun así mostrar problemas en los residuos.</p>
+<p>Luego interpretamos los modelos usando dos herramientas:</p>
+<ul>
+<li><p><code>summary()</code>, para revisar coeficientes, dirección de los efectos y significancia;</p></li>
+<li><p><code>emmeans</code>, para obtener medias estimadas y contrastes en una escala más fácil de interpretar.</p></li>
+</ul>
+<p>Esto fue importante porque los modelos usan enlace log. Entonces, los coeficientes del <code>summary()</code> están en escala logarítmica. Para comunicar los resultados de forma más clara, usamos medias esperadas, razones entre medias e intervalos de confianza.</p>
+</section>
+</section>
+<section id="diagnóstico-de-modelos" class="level2">
+<h2 class="anchored" data-anchor-id="diagnóstico-de-modelos">5. Diagnóstico de modelos</h2>
+</section>
+<section id="resultados-principales" class="level2">
+<h2 class="anchored" data-anchor-id="resultados-principales">6. Resultados principales</h2>
+</section>
+<section id="conclusión" class="level2">
+<h2 class="anchored" data-anchor-id="conclusión">7. Conclusión</h2>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

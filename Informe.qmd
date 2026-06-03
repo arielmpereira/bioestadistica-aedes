@@ -12,11 +12,13 @@ Este paper analiza cómo el ambiente urbano influye en la presencia de mosquitos
 
 El trabajo permite identificar qué factores del entorno (lugar, recipientes con agua o la época del año) influyen en la aparición y cantidad de mosquitos. Además, considera tanto las características generales de la ciudad como los lugares específicos donde se acumula agua, lo que ayuda a entender mejor el problema.
 
-Desde el punto de vista social, el estudio es importante porque muestra que muchos criaderos de mosquitos son generados por las personas, por ejemplo a través de recipientes o residuos con agua acumulada. Esto indica que el riesgo de dengue no depende solo de factores naturales, sino también de cómo está organizado el entorno urbano y de las prácticas de la población.
+Desde el punto de vista social, el estudio es importante porque muestra que muchos criaderos de mosquitos son generados por las personas, por ejemplo a través de recipientes o residuos con agua acumulada. Esto indica que el riesgo sanitario asociado a *Aedes* no depende solo de factores naturales, sino también de cómo está organizado el entorno urbano y de las prácticas de la población.
 
 El estudio es de tipo observacional, ya que los investigadores no manipulan las variables, sino que registran lo que ocurre en el ambiente natural. Además, es un estudio longitudinal, porque se desarrolla a lo largo del tiempo (entre 2021 y 2022) para analizar cómo varía la presencia de mosquitos según la estación del año.
 
 El muestreo se realizó mediante grillas distribuidas en la ciudad, que representan distintos tipos de ambientes, como zonas urbanas de distinta densidad, plantaciones, lagos y zonas baldías. Dentro de cada grilla se identificaron y analizaron los microhábitats (recipientes con agua) donde pueden desarrollarse las larvas.
+
+En este informe nos enfocamos en la abundancia de mosquitos emergidos. Las preguntas principales fueron: en qué estación se espera mayor abundancia, qué tipos de criaderos parecen más productivos y si los patrones son similares para la abundancia total, *Aedes aegypti* y *Aedes albopictus*.
 
 ------------------------------------------------------------------------
 
@@ -42,7 +44,7 @@ Para el análisis se seleccionaron tres variables respuesta de abundancia: abund
 
 En la exploración inicial se observó que las variables de abundancia tenían una gran cantidad de ceros. Los valores fueron altos: aproximadamente 83% de ceros para la abundancia total, 92% para *Aedes aegypti* y 95% para *Aedes albopictus*. Esto mostró que el exceso de ceros era una característica central de los datos y no un detalle menor. Además, las distribuciones fueron muy asimétricas, con muchos valores en cero y pocos criaderos con abundancias altas.
 
-Después se analizó la distribución de los valores positivos de abundancia. Esta mirada permitió observar mejor qué ocurría cuando efectivamente emergían mosquitos. Se encontraron diferencias entre estaciones y entre especies: la abundancia total mostró mayor dispersión en algunas estaciones, especialmente en feb–march y july–september. *Aedes aegypti* presentó un patrón parecido al total, mientras que *Aedes albopictus* mostró una distribución más concentrada y con presencia más marcada en april–june. Esto indicó que las especies no se comportan igual y que era conveniente modelarlas por separado.
+Después se analizó la distribución de los valores positivos de abundancia. Esta mirada permitió observar mejor qué ocurría cuándo efectivamente emergían mosquitos. Se encontraron diferencias entre estaciones y entre especies: la abundancia total mostró mayor dispersión en algunas estaciones, especialmente en feb–march y july–september. *Aedes aegypti* presentó un patrón parecido al total, mientras que *Aedes albopictus* mostró una distribución más concentrada y con presencia más marcada en april–june. Esto indicó que las especies no se comportan igual y que era conveniente modelarlas por separado.
 
 Un punto importante fue la interpretación de los ceros. Como ya se habían eliminado los recipientes sin agua, los ceros restantes corresponden a criaderos con agua donde no emergieron mosquitos. Por eso no pueden considerarse simples errores o recipientes inactivos. Son ceros biológicamente relevantes, que pueden deberse a condiciones desfavorables del criadero o a variabilidad propia del proceso ecológico.
 
@@ -90,7 +92,9 @@ En los modelos inflados en ceros se agregó:
 
 Esto significa que la parte de inflación de ceros se modeló en función de la estación.
 
-La parte condicional del modelo estima cuántos mosquitos se esperan en cada criadero. Esta parte también puede producir ceros, porque un criadero puede tener agua y aun así no producir mosquitos. La parte de inflación de ceros se agrega cuando aparecen más ceros de los que el modelo de conteo puede manejar bien.
+El modelo ZINB combina dos partes: una parte estima la abundancia esperada y otra parte ayuda a representar el exceso de ceros. En este informe usamos la segunda parte para mejorar el ajuste, pero interpretamos principalmente la abundancia esperada.
+
+La parte condicional del modelo estima cuántos mosquitos se esperan en cada criadero. Esta parte también puede producir ceros, porque un criadero puede tener agua y aun así no producir mosquitos. La parte de inflación de ceros se agrega cuándo aparecen más ceros de los que el modelo de conteo puede manejar bien.
 
 ### Comparación por AIC
 
@@ -104,7 +108,7 @@ La comparación inicial se hizo para las tres respuestas: abundancia total, *Aed
 
 Tabla 1. Comparación de las distintas familias de modelos
 
-En las tres respuestas, el menor AIC correspondió al modelo binomial negativa inflado en ceros (ZINB). Esto indicó que, para estos datos, el modelo ZINB representaba mejor la combinación de sobredispersión y exceso de ceros. Por eso usamos esta familia de modelos para continuar el análisis.
+En las tres respuestas, el menor AIC correspondió al modelo binomial negativa inflada en ceros (ZINB). Esto indicó que, para estos datos, el modelo ZINB representaba mejor la combinación de sobredispersión y exceso de ceros. Por eso usamos esta familia de modelos para continuar el análisis.
 
 ### 4.3. Dos líneas de análisis: macrohábitat y microhábitat
 
@@ -150,27 +154,83 @@ Después de ajustar cada modelo revisamos los residuos con DHARMa. Esta revisió
 
 Luego interpretamos los modelos usando dos herramientas:
 
--   `summary()`, para revisar coeficientes, dirección de los efectos y significancia;
+-   **summary()**: para revisar coeficientes, dirección de los efectos y significancia;
 
--   `emmeans`, para obtener medias estimadas y contrastes en una escala más fácil de interpretar.
+-   **emmeans**: para obtener medias estimadas y contrastes en una escala más fácil de interpretar.
 
-Esto fue importante porque los modelos usan enlace log. Entonces, los coeficientes del `summary()` están en escala logarítmica. Para comunicar los resultados de forma más clara, usamos medias esperadas, razones entre medias e intervalos de confianza.
+Esto fue importante porque los modelos usan enlace log. Entonces, los coeficientes del summary() están en escala logarítmica. Para comunicar los resultados de forma más clara, usamos medias esperadas, razones entre medias e intervalos de confianza.
 
 ------------------------------------------------------------------------
 
 ## 5. Diagnóstico de modelos
 
+### 5.1 Modelos utilizados
+
+Una vez seleccionada la familia ZINB, ajustamos seis modelos finales. Para cada respuesta se ajustó un modelo de macrohábitat y un modelo de microhábitat con condiciones internas del criadero. La estructura de los modelos fue la siguiente:
+
+```         
+library(glmmTMB)
+
+# 1. Abundancia total - modelo de macrohábitat
+modelo_total_macro <- glmmTMB(
+  `Total mosquito emerged` ~ Season + Macrohabitat + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+# 2. Abundancia total - modelo de microhábitat + condiciones internas
+modelo_total_micro <- glmmTMB(
+  `Total mosquito emerged` ~ Season + Microhabitat_rec + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+# 3. Aedes aegypti - modelo de macrohábitat
+modelo_aegypti_macro <- glmmTMB(
+  `Aedes aegypti` ~ Season + Macrohabitat + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+# 4. Aedes aegypti - modelo de microhábitat + condiciones internas
+modelo_aegypti_micro <- glmmTMB(
+  `Aedes aegypti` ~ Season + Microhabitat_rec + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+# 5. Aedes albopictus - modelo de macrohábitat
+modelo_albopictus_macro <- glmmTMB(
+  `Aedes albopictus` ~ Season + Macrohabitat + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+
+# 6. Aedes albopictus - modelo de microhábitat + condiciones internas
+modelo_albopictus_micro <- glmmTMB(
+  `Aedes albopictus` ~ Season + Microhabitat_rec + temp_std + pH_std + logvol_std + (1 | Grid_no),
+  ziformula = ~ Season,
+  family = nbinom2,
+  data = datos_mod
+)
+```
+
 Luego del ajuste de los seis modelos finales, revisamos los residuos simulados con DHARMa.
 
-Como se ajustaron seis modelos, en el informe resumimos los diagnósticos en una tabla general y la siguiente figura muestra un diagnóstico representativo. En este caso se trata del diagnóstico del modelo Macrohabitat para la abundancia total.
+Como se ajustaron seis modelos, en el informe resumimos los diagnósticos en una tabla general. La siguiente figura muestra un diagnóstico representativo. En este caso se trata del diagnóstico del modelo Macrohabitat para la abundancia total.
 
-Los gráficos completos de residuos se dejan en QMD del modelado de abundancia incluido en el anexo del informe.
+Los gráficos completos de residuos quedan disponibles en el QMD de modelado de abundancia, incluido en el anexo del informe.
 
 ![](images/clipboard-605720505.png)
 
 **Figura 3: Diagnóstico con DHARMa del modelo macrohabitat de abundancia total**
 
-### Tabla resumen de diagnósticos por DHARMa de los 6 modelos
+### 5.2 Tabla resumen de diagnósticos por DHARMa de los 6 modelos
 
 | Respuesta | Modelo | Uniformidad | Dispersión | Exceso de ceros | Lectura general |
 |----|----|----|----|----|----|
@@ -181,30 +241,36 @@ Los gráficos completos de residuos se dejan en QMD del modelado de abundancia i
 | *Aedes albopictus* | Macro | ok | ok | ok | ajuste razonable |
 | *Aedes albopictus* | Micro + ambiente | ok | ok | ok | ajuste razonable |
 
-Tabla 2: Resumen de los diagnósticos por DHARMa de los 6 modelos
+**Tabla 2: Resumen de los diagnósticos por DHARMa de los 6 modelos**
 
 En términos generales, los diagnósticos no mostraron problemas suficientemente graves como para descartar la estrategia de modelado elegida. Por eso continuamos con la interpretación de los modelos ZINB.
 
-# 6. Resultados principales
+------------------------------------------------------------------------
 
-Una vez ajustados y diagnosticados los modelos, el paso siguiente fue interpretar los resultados en una escala más clara. Los `summary()` de los modelos permiten revisar coeficientes, dirección de los efectos y significancia, pero esos coeficientes están en escala logarítmica. Por eso no son la forma más directa de comunicar los resultados.
+## 6. Resultados principales
+
+Una vez ajustados y diagnosticados los modelos, el paso siguiente fue interpretar los resultados en una escala más clara. Los summary() de los modelos permiten revisar coeficientes, dirección de los efectos y significancia, pero esos coeficientes están en escala logarítmica. Por eso no son la forma más directa de comunicar los resultados.
 
 Para facilitar la interpretación usamos **emmeans**, que permite obtener medias estimadas en escala de respuesta. En este caso, las estimaciones se interpretan como abundancia esperada de mosquitos emergidos por criadero.
 
-Nos enfocamos en dos preguntas aplicadas:
+**Nos enfocamos en dos preguntas aplicadas:**
 
-1.  ¿En qué estación se espera mayor abundancia de mosquitos?
-2.  ¿En qué tipo de microhábitat se espera mayor abundancia?
+1.  **¿En qué estación se espera mayor abundancia de mosquitos?**
+2.  **¿En qué tipo de microhábitat se espera mayor abundancia?**
 
 Estas preguntas son útiles porque permiten pasar del modelo estadístico a una lectura ecológica y sanitaria: cuándo aparecen más mosquitos y qué tipos de criaderos podrían ser más productivos.
 
+La unidad de análisis es el criadero. Por eso, cuándo hablamos de abundancia esperada nos referimos al número esperado de mosquitos emergidos por criadero, según el modelo.
+
 ### 6.1 Abundancia esperada por estación y especie
+
+En estos gráficos, cada punto representa la abundancia esperada estimada por el modelo y cada línea horizontal representa el intervalo de confianza. Intervalos más anchos indican mayor incertidumbre.
 
 ![](images/clipboard-4242840250.png)
 
 **Figura 4: Abundancia esperada por estación y especie**
 
-La abundancia esperada por estación mostró que el patrón más claro aparece en la abundancia total y en *Aedes aegypti*. En ambos casos, `feb-march` presentó los valores esperados más altos.
+La abundancia esperada por estación mostró que el patrón más claro aparece en la abundancia total y en *Aedes aegypti*. En ambos casos, feb-march presentó los valores esperados más altos.
 
 En *Aedes albopictus*, el patrón estacional fue menos claro. Esto coincide con lo observado en los modelos: al separar por especie aumenta la proporción de ceros y las estimaciones se vuelven más inciertas.
 
@@ -214,7 +280,7 @@ Este resultado indica que la estación parece ser un factor importante para la a
 
 ![](images/clipboard-3710672220.png)
 
-**Figura 5: Abundancia esperada por Microhabitat y especie**
+**Figura 5: Abundancia esperada por Microhábitat y especie**
 
 Al analizar los microhábitats, el resultado más marcado aparece en *Aedes aegypti*. En esta especie, **Grinding stones** presentó la mayor abundancia esperada.
 
@@ -222,7 +288,7 @@ Para la abundancia total, las diferencias entre microhábitats fueron menos clar
 
 Este gráfico es importante porque permite identificar tipos concretos de criaderos que podrían ser más relevantes para la producción de mosquitos.
 
-### Variables ambientales
+### 6.3 Variables ambientales
 
 Además de estación y microhábitat, los modelos incluyeron temperatura, pH y volumen transformado. Estos efectos no fueron iguales para todas las respuestas.
 
@@ -232,7 +298,7 @@ Además de estación y microhábitat, los modelos incluyeron temperatura, pH y v
 | *Aedes aegypti*    | Sin efecto claro | Sin efecto claro | Sin efecto claro |
 | *Aedes albopictus* | Sin efecto claro | Efecto positivo  | Efecto negativo  |
 
-**Tabla 3: Resumen de resultados de variables ambientales del microhabitat**
+**Tabla 3: Resumen de resultados de variables ambientales del microhábitat**
 
 Para la abundancia total, la temperatura mostró un efecto negativo. Para *Aedes aegypti*, ninguna de las variables ambientales mostró un efecto claro. Para *Aedes albopictus*, el pH mostró un efecto positivo y el volumen un efecto negativo.
 
@@ -248,7 +314,7 @@ A lo largo del análisis usamos primero los `summary()` para revisar la direcci�
 
 ### Abundancia total
 
-En la abundancia total, el patrón más claro fue estacional. La mayor abundancia esperada apareció en `feb-march`. Esto indica que, según el modelo, ese período concentra una mayor producción esperada de mosquitos emergidos.
+En la abundancia total, el patrón más claro fue estacional. La mayor abundancia esperada apareció en feb-march. Esto indica que, según el modelo, ese período concentra una mayor producción esperada de mosquitos emergidos.
 
 A nivel de macrohábitat, `Lake` apareció asociado con menor abundancia total. Sin embargo, para una lectura aplicada, el resultado más útil parece ser el patrón estacional, porque permite identificar un momento del año donde podría esperarse mayor abundancia.
 
@@ -282,7 +348,9 @@ La parte de inflación de ceros fue importante para mejorar el ajuste de los mod
 
 Este recorrido muestra que la abundancia total permite ver el patrón general, pero que separar por especie aporta información más específica. Al mismo tiempo, al separar por especie aumentan los ceros y la incertidumbre, por lo que las conclusiones sobre *Aedes aegypti* y especialmente sobre *Aedes albopictus* deben leerse con más cautela.
 
-# 8. Anexos
+------------------------------------------------------------------------
+
+## 8. Anexos
 
 El informe principal resume el recorrido y los resultados más importantes del análisis. Para no sobrecargar el texto con salidas extensas de código, gráficos exploratorios y explicaciones técnicas, dejamos como anexos los documentos de trabajo que respaldan cada etapa del análisis.
 

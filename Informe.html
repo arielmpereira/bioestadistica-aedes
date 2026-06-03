@@ -198,8 +198,39 @@ family = nbinom2</code></pre>
 <section id="resultados-principales" class="level2">
 <h2 class="anchored" data-anchor-id="resultados-principales">6. Resultados principales</h2>
 </section>
-<section id="conclusión" class="level2">
-<h2 class="anchored" data-anchor-id="conclusión">7. Conclusión</h2>
+<section id="section" class="level2">
+<h2 class="anchored" data-anchor-id="section"></h2>
+</section>
+<section id="conclusiones-del-modelado-de-abundancia" class="level2">
+<h2 class="anchored" data-anchor-id="conclusiones-del-modelado-de-abundancia">7. Conclusiones del modelado de abundancia</h2>
+<p>El modelado permitió analizar la abundancia de mosquitos en tres niveles: abundancia total, abundancia de <em>Aedes aegypti</em> y abundancia de <em>Aedes albopictus</em>. En los tres casos se trabajó con modelos binomiales negativos inflados en ceros, porque el análisis exploratorio mostró dos problemas importantes: sobredispersión y una alta proporción de ceros.</p>
+<p>A lo largo del análisis usamos primero los <code>summary()</code> para revisar la dirección de los efectos y detectar qué variables parecían más importantes. Después resumimos esos resultados en una tabla comparativa y finalmente usamos <code>emmeans</code> para pasar a una escala más clara: abundancias esperadas por estación, especie y tipo de criadero.</p>
+<section id="abundancia-total" class="level3">
+<h3 class="anchored" data-anchor-id="abundancia-total">Abundancia total</h3>
+<p>En la abundancia total, el patrón más claro fue estacional. La mayor abundancia esperada apareció en <code>feb-march</code>. Esto indica que, según el modelo, ese período concentra una mayor producción esperada de mosquitos emergidos.</p>
+<p>A nivel de macrohábitat, <code>Lake</code> apareció asociado con menor abundancia total. Sin embargo, para una lectura aplicada, el resultado más útil parece ser el patrón estacional, porque permite identificar un momento del año donde podría esperarse mayor abundancia.</p>
+<p>En el modelo de microhábitat y condiciones internas, no aparecieron diferencias claras entre tipos de microhábitat para la abundancia total. Entre las variables ambientales, la temperatura mostró un efecto negativo: a mayor temperatura estandarizada, menor abundancia esperada total. Este resultado debe interpretarse dentro del modelo, porque no necesariamente significa que la temperatura por sí sola explique toda la dinámica de abundancia.</p>
+</section>
+<section id="aedes-aegypti" class="level3">
+<h3 class="anchored" data-anchor-id="aedes-aegypti"><em>Aedes aegypti</em></h3>
+<p>En <em>Aedes aegypti</em> también apareció una señal estacional importante. Al igual que en la abundancia total, <code>feb-march</code> mostró mayor abundancia esperada. Esto es relevante porque <em>Aedes aegypti</em> es una de las especies de mayor interés sanitario.</p>
+<p>En el modelo de macrohábitat, <code>Lake</code> mostró menor abundancia esperada de <em>Aedes aegypti</em>. Pero el resultado más importante apareció al mirar los microhábitats: <code>Grinding stones</code> fue el tipo de criadero con mayor abundancia esperada para esta especie.</p>
+<p>Este resultado es útil desde una mirada aplicada, porque no solo indica una estación de mayor abundancia, sino también un tipo concreto de criadero que podría ser más productivo para <em>Aedes aegypti</em>. De todos modos, como el efecto estimado fue muy grande, conviene interpretarlo con cautela y revisarlo junto con la distribución de los datos.</p>
+<p>En este modelo, temperatura, pH y volumen no mostraron efectos claros para <em>Aedes aegypti</em>. También se observó que el efecto aleatorio de <code>Grid_no</code> tuvo mayor peso que en otros modelos, lo que indica que algunas diferencias entre grillas siguieron siendo importantes aun después de considerar estación, microhábitat y condiciones del criadero.</p>
+</section>
+<section id="aedes-albopictus" class="level3">
+<h3 class="anchored" data-anchor-id="aedes-albopictus"><em>Aedes albopictus</em></h3>
+<p>En <em>Aedes albopictus</em>, los patrones fueron menos claros que en la abundancia total y en <em>Aedes aegypti</em>. Las estaciones no mostraron diferencias fuertes en la abundancia esperada, y tampoco apareció un microhábitat claramente dominante.</p>
+<p>En el modelo de macrohábitat, <code>High dense</code> mostró menor abundancia esperada. En el modelo de microhábitat y condiciones internas, los resultados más claros aparecieron en las variables ambientales: el pH tuvo un efecto positivo y el volumen un efecto negativo.</p>
+<p>Esto sugiere que, para <em>Aedes albopictus</em>, las condiciones internas del criadero podrían ser más informativas que la estación o el tipo de microhábitat. Sin embargo, esta interpretación debe hacerse con más cuidado, porque esta especie tuvo muchos ceros y menos registros positivos que la abundancia total.</p>
+</section>
+<section id="lectura-general" class="level3">
+<h3 class="anchored" data-anchor-id="lectura-general">Lectura general</h3>
+<p>En conjunto, el resultado más claro del modelado es que la abundancia total y <em>Aedes aegypti</em> muestran un patrón estacional marcado, con mayor abundancia esperada en <code>feb-march</code>. Además, <em>Aedes aegypti</em> mostró una asociación fuerte con <code>Grinding stones</code>, lo que puede señalar un tipo de criadero especialmente importante.</p>
+<p>Para <em>Aedes albopictus</em>, el patrón fue más incierto. No se observó una señal estacional fuerte ni un microhábitat claramente dominante, pero sí aparecieron señales asociadas al pH y al volumen.</p>
+<p>La parte de inflación de ceros fue importante para mejorar el ajuste de los modelos, porque los datos tenían muchos ceros. Sin embargo, no la tomamos como eje principal de las conclusiones aplicadas. Para responder las preguntas del trabajo priorizamos la parte condicional del modelo, que estima la abundancia esperada de mosquitos.</p>
+<p>Este recorrido muestra que la abundancia total permite ver el patrón general, pero que separar por especie aporta información más específica. Al mismo tiempo, al separar por especie aumentan los ceros y la incertidumbre, por lo que las conclusiones sobre <em>Aedes aegypti</em> y especialmente sobre <em>Aedes albopictus</em> deben leerse con más cautela.</p>
+</section>
 </section>
 </section>
 

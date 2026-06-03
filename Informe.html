@@ -78,9 +78,9 @@ ul.task-list li input[type="checkbox"] {
 <p>El muestreo se realizó mediante grillas distribuidas en la ciudad, que representan distintos tipos de ambientes, como zonas urbanas de distinta densidad, plantaciones, lagos y zonas baldías. Dentro de cada grilla se identificaron y analizaron los microhábitats (recipientes con agua) donde pueden desarrollarse las larvas.</p>
 <hr>
 </section>
-<section id="como-está-compuesta-la-base" class="level2">
-<h2 class="anchored" data-anchor-id="como-está-compuesta-la-base">2. Como está compuesta la base</h2>
-<p>Los autores realizaron un muestreo sistemático de recipientes con agua distribuidos en diferentes sectores de la ciudad. Para cada criadero registraron características ambientales y fisico-químicas, entre ellas el tipo de hábitat, el volumen de agua, la temperatura, el pH y otras variables relacionadas con las condiciones del sitio. Además, se cuantificó la cantidad de mosquitos emergidos y se identificaron las especies presentes, principalmente <em>Aedes aegypti</em> y <em>Aedes albopictus</em>.</p>
+<section id="cómo-está-compuesta-la-base" class="level2">
+<h2 class="anchored" data-anchor-id="cómo-está-compuesta-la-base">2. Cómo está compuesta la base</h2>
+<p>Los autores realizaron un muestreo sistemático de recipientes con agua distribuidos en diferentes sectores de la ciudad. Para cada criadero registraron características ambientales y físico-químicas, entre ellas el tipo de hábitat, el volumen de agua, la temperatura, el pH y otras variables relacionadas con las condiciones del sitio. Además, se cuantificó la cantidad de mosquitos emergidos y se identificaron las especies presentes, principalmente <em>Aedes aegypti</em> y <em>Aedes albopictus</em>.</p>
 <p>La base de datos original contiene información de más de mil observaciones correspondientes a recipientes inspeccionados en distintos momentos del año. Cada registro representa un criadero individual y reúne tanto variables explicativas asociadas al ambiente como variables de respuesta relacionadas con la abundancia de mosquitos.</p>
 <p>Debido a que el estudio fue realizado en diferentes estaciones del año y en distintos tipos de hábitats, la base permite explorar cómo las condiciones ambientales y las características de los criaderos se relacionan con la presencia y la abundancia de mosquitos. Asimismo, incluye una estructura jerárquica de muestreo, ya que varios criaderos fueron relevados dentro de las mismas celdas espaciales utilizadas por los autores para organizar el estudio.</p>
 <p>En este informe se utiliza la base de datos del artículo como punto de partida para desarrollar un recorrido propio de análisis estadístico. El objetivo no es reproducir exactamente los resultados publicados, sino aprovechar la información disponible para explorar distintas estrategias de modelado y profundizar en la interpretación de los patrones observados en los datos.</p>
@@ -99,7 +99,7 @@ ul.task-list li input[type="checkbox"] {
 <p>Por último, se revisó el supuesto de independencia. Las observaciones no son completamente independientes porque se tomaron múltiples mediciones dentro de una misma grilla, y cada grilla fue visitada en distintas estaciones del año. Esto genera una estructura agrupada de los datos, por lo que en el modelado posterior se consideró necesario incluir efectos aleatorios.</p>
 <p>En conjunto, el análisis exploratorio mostró que los datos de abundancia son conteos, tienen exceso de ceros, fuerte asimetría y dependencia espacial o agrupada por grilla. Por eso, el AE orientó el análisis hacia modelos para conteos, especialmente binomial negativa, con posibilidad de incorporar inflación de ceros y estructura aleatoria.</p>
 <p><img src="images/clipboard-3719646126.png" class="img-fluid"></p>
-<p><strong>Figura 1. Proporción de ceros en las variables de abundancia</strong></p>
+<p><strong>Figura 1. Proporción de ceros en las variables de abundancia.</strong></p>
 <hr>
 </section>
 <section id="modelado-de-abundancia" class="level2">
@@ -107,11 +107,11 @@ ul.task-list li input[type="checkbox"] {
 <p>A partir del análisis exploratorio, el paso siguiente fue ajustar modelos que fueran coherentes con el tipo de datos que teníamos. Las tres variables respuesta eran conteos: abundancia total de mosquitos emergidos, abundancia de <em>Aedes aegypti</em> y abundancia de <em>Aedes albopictus</em>.</p>
 <section id="estrategia-de-modelado" class="level3">
 <h3 class="anchored" data-anchor-id="estrategia-de-modelado">4.1 Estrategia de modelado</h3>
-<p>El análisis se organizó en dos etapas. Primero comparamos distintas familias de modelos para decidir cuál representaba mejor los datos de abundancia. Se compararon tres opciones: Poisson, binomial negativo y binomial negativo inflado en ceros.</p>
+<p>El análisis se organizó en dos etapas. Primero comparamos distintas familias de modelos para decidir cuál representaba mejor los datos de abundancia. Se compararon tres opciones: Poisson, binomial negativa y binomial negativa inflada en ceros.</p>
 <p>Después, una vez elegida la familia más adecuada, ajustamos modelos separados para macrohábitat y para microhábitat con condiciones internas del criadero.</p>
 <p>El macrohábitat habla del ambiente urbano general donde está el criadero. El microhábitat y las condiciones internas hablan más directamente del recipiente y del agua donde se desarrollan las larvas.</p>
 <p><img src="images/clipboard-1949355639.png" class="img-fluid"></p>
-<p><strong>Figura 2: Estrategía de modelado</strong></p>
+<p><strong>Figura 2: Estrategia de modelado</strong></p>
 </section>
 <section id="selección-inicial-de-la-familia-de-modelos" class="level3">
 <h3 class="anchored" data-anchor-id="selección-inicial-de-la-familia-de-modelos">4.2. Selección inicial de la familia de modelos</h3>
@@ -122,8 +122,9 @@ ul.task-list li input[type="checkbox"] {
 <p><code>ziformula = ~ Season</code></p>
 <p>Esto significa que la parte de inflación de ceros se modeló en función de la estación.</p>
 <p>La parte condicional del modelo estima cuántos mosquitos se esperan en cada criadero. Esta parte también puede producir ceros, porque un criadero puede tener agua y aun así no producir mosquitos. La parte de inflación de ceros se agrega cuando aparecen más ceros de los que el modelo de conteo puede manejar bien.</p>
-<section id="comparación-por-aic" class="level4">
-<h4 class="anchored" data-anchor-id="comparación-por-aic">Comparación por AIC</h4>
+</section>
+<section id="comparación-por-aic" class="level3">
+<h3 class="anchored" data-anchor-id="comparación-por-aic">Comparación por AIC</h3>
 <p>La comparación inicial se hizo para las tres respuestas: abundancia total, <em>Aedes aegypti</em> y <em>Aedes albopictus</em>.</p>
 <table class="caption-top table">
 <thead>
@@ -155,9 +156,8 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 </tbody>
 </table>
-<p>Tabla 1. Comparación de distintas familas de modelos</p>
-<p>En las tres respuestas, el menor AIC correspondió al modelo binomial negativo inflado en ceros (ZIMB). Esto indicó que, para estos datos, el modelo ZINB representaba mejor la combinación de sobredispersión y exceso de ceros. Por eso usamos esta familia de modelos para continuar el análisis.</p>
-</section>
+<p>Tabla 1. Comparación de las distintas familias de modelos</p>
+<p>En las tres respuestas, el menor AIC correspondió al modelo binomial negativa inflado en ceros (ZINB). Esto indicó que, para estos datos, el modelo ZINB representaba mejor la combinación de sobredispersión y exceso de ceros. Por eso usamos esta familia de modelos para continuar el análisis.</p>
 </section>
 <section id="dos-líneas-de-análisis-macrohábitat-y-microhábitat" class="level3">
 <h3 class="anchored" data-anchor-id="dos-líneas-de-análisis-macrohábitat-y-microhábitat">4.3. Dos líneas de análisis: macrohábitat y microhábitat</h3>
@@ -190,17 +190,18 @@ family = nbinom2</code></pre>
 <li><p><code>emmeans</code>, para obtener medias estimadas y contrastes en una escala más fácil de interpretar.</p></li>
 </ul>
 <p>Esto fue importante porque los modelos usan enlace log. Entonces, los coeficientes del <code>summary()</code> están en escala logarítmica. Para comunicar los resultados de forma más clara, usamos medias esperadas, razones entre medias e intervalos de confianza.</p>
+<hr>
 </section>
 </section>
 <section id="diagnóstico-de-modelos" class="level2">
 <h2 class="anchored" data-anchor-id="diagnóstico-de-modelos">5. Diagnóstico de modelos</h2>
 <p>Luego del ajuste de los seis modelos finales, revisamos los residuos simulados con DHARMa.</p>
-<p>Como se ajustaron seis modelos, en el informe resumimos los diagnósticos en una tabla general y la siguiente imágen muestra un gráfico representativo. En este caso se trata del diagnóstico del modelo Macrohabitat para la abundancia total.</p>
-<p>Los gráficos completos de residuos se dejan en QMD del modelado de abundancia includo en el anexo del informe.</p>
+<p>Como se ajustaron seis modelos, en el informe resumimos los diagnósticos en una tabla general y la siguiente figura muestra un diagnóstico representativo. En este caso se trata del diagnóstico del modelo Macrohabitat para la abundancia total.</p>
+<p>Los gráficos completos de residuos se dejan en QMD del modelado de abundancia incluido en el anexo del informe.</p>
 <p><img src="images/clipboard-605720505.png" class="img-fluid"></p>
-<p>Figura : Diagnostico con DHARMa del modelo macrohabitat de abundancia total</p>
-<section id="tabla-resumen-de-diagnosticos-por-dharma-de-los-6-modelos" class="level3">
-<h3 class="anchored" data-anchor-id="tabla-resumen-de-diagnosticos-por-dharma-de-los-6-modelos">Tabla resumen de diagnosticos por DHARMa de los 6 modelos</h3>
+<p><strong>Figura 3: Diagnóstico con DHARMa del modelo macrohabitat de abundancia total</strong></p>
+<section id="tabla-resumen-de-diagnósticos-por-dharma-de-los-6-modelos" class="level3">
+<h3 class="anchored" data-anchor-id="tabla-resumen-de-diagnósticos-por-dharma-de-los-6-modelos">Tabla resumen de diagnósticos por DHARMa de los 6 modelos</h3>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 16%">
@@ -271,7 +272,7 @@ family = nbinom2</code></pre>
 </tr>
 </tbody>
 </table>
-<p>Tabla: Resumen de los diagnósticos por DHARMa de los 6 modelos</p>
+<p>Tabla 2: Resumen de los diagnósticos por DHARMa de los 6 modelos</p>
 <p>En términos generales, los diagnósticos no mostraron problemas suficientemente graves como para descartar la estrategia de modelado elegida. Por eso continuamos con la interpretación de los modelos ZINB.</p>
 </section>
 </section>
@@ -289,6 +290,7 @@ family = nbinom2</code></pre>
 <section id="abundancia-esperada-por-estación-y-especie" class="level3">
 <h3 class="anchored" data-anchor-id="abundancia-esperada-por-estación-y-especie">6.1 Abundancia esperada por estación y especie</h3>
 <p><img src="images/clipboard-4242840250.png" class="img-fluid"></p>
+<p><strong>Figura 4: Abundancia esperada por estación y especie</strong></p>
 <p>La abundancia esperada por estación mostró que el patrón más claro aparece en la abundancia total y en <em>Aedes aegypti</em>. En ambos casos, <code>feb-march</code> presentó los valores esperados más altos.</p>
 <p>En <em>Aedes albopictus</em>, el patrón estacional fue menos claro. Esto coincide con lo observado en los modelos: al separar por especie aumenta la proporción de ceros y las estimaciones se vuelven más inciertas.</p>
 <p>Este resultado indica que la estación parece ser un factor importante para la abundancia total y para <em>Aedes aegypti</em>, pero no se observa con la misma claridad en <em>Aedes albopictus</em>.</p>
@@ -296,9 +298,54 @@ family = nbinom2</code></pre>
 <section id="abundancia-esperada-por-microhábitat-y-especie" class="level3">
 <h3 class="anchored" data-anchor-id="abundancia-esperada-por-microhábitat-y-especie">6.2 Abundancia esperada por microhábitat y especie</h3>
 <p><img src="images/clipboard-3710672220.png" class="img-fluid"></p>
-<p>Al analizar los microhábitats, el resultado más marcado aparece en <em>Aedes aegypti</em>. En esta especie, <code>Grinding stones</code> presentó la mayor abundancia esperada.</p>
+<p><strong>Figura 5: Abundancia esperada por Microhabitat y especie</strong></p>
+<p>Al analizar los microhábitats, el resultado más marcado aparece en <em>Aedes aegypti</em>. En esta especie, <strong>Grinding stones</strong> presentó la mayor abundancia esperada.</p>
 <p>Para la abundancia total, las diferencias entre microhábitats fueron menos claras. En <em>Aedes albopictus</em> tampoco apareció un microhábitat claramente dominante, aunque algunas categorías mostraron valores más altos con mayor incertidumbre.</p>
 <p>Este gráfico es importante porque permite identificar tipos concretos de criaderos que podrían ser más relevantes para la producción de mosquitos.</p>
+</section>
+<section id="variables-ambientales" class="level3">
+<h3 class="anchored" data-anchor-id="variables-ambientales">Variables ambientales</h3>
+<p>Además de estación y microhábitat, los modelos incluyeron temperatura, pH y volumen transformado. Estos efectos no fueron iguales para todas las respuestas.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 27%">
+<col style="width: 24%">
+<col style="width: 24%">
+<col style="width: 24%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Respuesta</th>
+<th>Temperatura</th>
+<th>pH</th>
+<th>Volumen</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Abundancia total</td>
+<td>Efecto negativo</td>
+<td>Sin efecto claro</td>
+<td>Sin efecto claro</td>
+</tr>
+<tr class="even">
+<td><em>Aedes aegypti</em></td>
+<td>Sin efecto claro</td>
+<td>Sin efecto claro</td>
+<td>Sin efecto claro</td>
+</tr>
+<tr class="odd">
+<td><em>Aedes albopictus</em></td>
+<td>Sin efecto claro</td>
+<td>Efecto positivo</td>
+<td>Efecto negativo</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Tabla 3: Resumen de resultados de variables ambientales del microhabitat</strong></p>
+<p>Para la abundancia total, la temperatura mostró un efecto negativo. Para <em>Aedes aegypti</em>, ninguna de las variables ambientales mostró un efecto claro. Para <em>Aedes albopictus</em>, el pH mostró un efecto positivo y el volumen un efecto negativo.</p>
+<p>Esto indica que las variables ambientales no tuvieron un patrón único para todas las respuestas.</p>
+<hr>
 </section>
 <section id="conclusiones-del-modelado-de-abundancia" class="level2">
 <h2 class="anchored" data-anchor-id="conclusiones-del-modelado-de-abundancia">7. Conclusiones del modelado de abundancia</h2>

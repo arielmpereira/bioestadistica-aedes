@@ -20,9 +20,9 @@ El muestreo se realizó mediante grillas distribuidas en la ciudad, que represen
 
 ------------------------------------------------------------------------
 
-## 2. Como está compuesta la base
+## 2. Cómo está compuesta la base
 
-Los autores realizaron un muestreo sistemático de recipientes con agua distribuidos en diferentes sectores de la ciudad. Para cada criadero registraron características ambientales y fisico-químicas, entre ellas el tipo de hábitat, el volumen de agua, la temperatura, el pH y otras variables relacionadas con las condiciones del sitio. Además, se cuantificó la cantidad de mosquitos emergidos y se identificaron las especies presentes, principalmente *Aedes aegypti* y *Aedes albopictus*.
+Los autores realizaron un muestreo sistemático de recipientes con agua distribuidos en diferentes sectores de la ciudad. Para cada criadero registraron características ambientales y físico-químicas, entre ellas el tipo de hábitat, el volumen de agua, la temperatura, el pH y otras variables relacionadas con las condiciones del sitio. Además, se cuantificó la cantidad de mosquitos emergidos y se identificaron las especies presentes, principalmente *Aedes aegypti* y *Aedes albopictus*.
 
 La base de datos original contiene información de más de mil observaciones correspondientes a recipientes inspeccionados en distintos momentos del año. Cada registro representa un criadero individual y reúne tanto variables explicativas asociadas al ambiente como variables de respuesta relacionadas con la abundancia de mosquitos.
 
@@ -56,7 +56,7 @@ En conjunto, el análisis exploratorio mostró que los datos de abundancia son c
 
 ![](images/clipboard-3719646126.png)
 
-**Figura 1. Proporción de ceros en las variables de abundancia**
+**Figura 1. Proporción de ceros en las variables de abundancia.**
 
 ------------------------------------------------------------------------
 
@@ -66,7 +66,7 @@ A partir del análisis exploratorio, el paso siguiente fue ajustar modelos que f
 
 ### 4.1 Estrategia de modelado
 
-El análisis se organizó en dos etapas. Primero comparamos distintas familias de modelos para decidir cuál representaba mejor los datos de abundancia. Se compararon tres opciones: Poisson, binomial negativo y binomial negativo inflado en ceros.
+El análisis se organizó en dos etapas. Primero comparamos distintas familias de modelos para decidir cuál representaba mejor los datos de abundancia. Se compararon tres opciones: Poisson, binomial negativa y binomial negativa inflada en ceros.
 
 Después, una vez elegida la familia más adecuada, ajustamos modelos separados para macrohábitat y para microhábitat con condiciones internas del criadero.
 
@@ -74,7 +74,7 @@ El macrohábitat habla del ambiente urbano general donde está el criadero. El m
 
 ![](images/clipboard-1949355639.png)
 
-**Figura 2: Estrategía de modelado**
+**Figura 2: Estrategia de modelado**
 
 ### 4.2. Selección inicial de la familia de modelos
 
@@ -92,7 +92,7 @@ Esto significa que la parte de inflación de ceros se modeló en función de la 
 
 La parte condicional del modelo estima cuántos mosquitos se esperan en cada criadero. Esta parte también puede producir ceros, porque un criadero puede tener agua y aun así no producir mosquitos. La parte de inflación de ceros se agrega cuando aparecen más ceros de los que el modelo de conteo puede manejar bien.
 
-#### Comparación por AIC
+### Comparación por AIC
 
 La comparación inicial se hizo para las tres respuestas: abundancia total, *Aedes aegypti* y *Aedes albopictus*.
 
@@ -102,9 +102,9 @@ La comparación inicial se hizo para las tres respuestas: abundancia total, *Aed
 | Aedes aegypti          | 2721    | 1067              | 1059 |
 | Aedes albopictus       | 1329    | 584               | 568  |
 
-Tabla 1. Comparación de distintas familas de modelos
+Tabla 1. Comparación de las distintas familias de modelos
 
-En las tres respuestas, el menor AIC correspondió al modelo binomial negativo inflado en ceros (ZIMB). Esto indicó que, para estos datos, el modelo ZINB representaba mejor la combinación de sobredispersión y exceso de ceros. Por eso usamos esta familia de modelos para continuar el análisis.
+En las tres respuestas, el menor AIC correspondió al modelo binomial negativa inflado en ceros (ZINB). Esto indicó que, para estos datos, el modelo ZINB representaba mejor la combinación de sobredispersión y exceso de ceros. Por eso usamos esta familia de modelos para continuar el análisis.
 
 ### 4.3. Dos líneas de análisis: macrohábitat y microhábitat
 
@@ -156,19 +156,21 @@ Luego interpretamos los modelos usando dos herramientas:
 
 Esto fue importante porque los modelos usan enlace log. Entonces, los coeficientes del `summary()` están en escala logarítmica. Para comunicar los resultados de forma más clara, usamos medias esperadas, razones entre medias e intervalos de confianza.
 
+------------------------------------------------------------------------
+
 ## 5. Diagnóstico de modelos
 
 Luego del ajuste de los seis modelos finales, revisamos los residuos simulados con DHARMa.
 
-Como se ajustaron seis modelos, en el informe resumimos los diagnósticos en una tabla general y la siguiente imágen muestra un gráfico representativo. En este caso se trata del diagnóstico del modelo Macrohabitat para la abundancia total.
+Como se ajustaron seis modelos, en el informe resumimos los diagnósticos en una tabla general y la siguiente figura muestra un diagnóstico representativo. En este caso se trata del diagnóstico del modelo Macrohabitat para la abundancia total.
 
-Los gráficos completos de residuos se dejan en QMD del modelado de abundancia includo en el anexo del informe.
+Los gráficos completos de residuos se dejan en QMD del modelado de abundancia incluido en el anexo del informe.
 
 ![](images/clipboard-605720505.png)
 
-Figura : Diagnostico con DHARMa del modelo macrohabitat de abundancia total
+**Figura 3: Diagnóstico con DHARMa del modelo macrohabitat de abundancia total**
 
-### Tabla resumen de diagnosticos por DHARMa de los 6 modelos
+### Tabla resumen de diagnósticos por DHARMa de los 6 modelos
 
 | Respuesta | Modelo | Uniformidad | Dispersión | Exceso de ceros | Lectura general |
 |----|----|----|----|----|----|
@@ -179,7 +181,7 @@ Figura : Diagnostico con DHARMa del modelo macrohabitat de abundancia total
 | *Aedes albopictus* | Macro | ok | ok | ok | ajuste razonable |
 | *Aedes albopictus* | Micro + ambiente | ok | ok | ok | ajuste razonable |
 
-Tabla: Resumen de los diagnósticos por DHARMa de los 6 modelos
+Tabla 2: Resumen de los diagnósticos por DHARMa de los 6 modelos
 
 En términos generales, los diagnósticos no mostraron problemas suficientemente graves como para descartar la estrategia de modelado elegida. Por eso continuamos con la interpretación de los modelos ZINB.
 
@@ -200,6 +202,8 @@ Estas preguntas son útiles porque permiten pasar del modelo estadístico a una 
 
 ![](images/clipboard-4242840250.png)
 
+**Figura 4: Abundancia esperada por estación y especie**
+
 La abundancia esperada por estación mostró que el patrón más claro aparece en la abundancia total y en *Aedes aegypti*. En ambos casos, `feb-march` presentó los valores esperados más altos.
 
 En *Aedes albopictus*, el patrón estacional fue menos claro. Esto coincide con lo observado en los modelos: al separar por especie aumenta la proporción de ceros y las estimaciones se vuelven más inciertas.
@@ -210,11 +214,31 @@ Este resultado indica que la estación parece ser un factor importante para la a
 
 ![](images/clipboard-3710672220.png)
 
-Al analizar los microhábitats, el resultado más marcado aparece en *Aedes aegypti*. En esta especie, `Grinding stones` presentó la mayor abundancia esperada.
+**Figura 5: Abundancia esperada por Microhabitat y especie**
+
+Al analizar los microhábitats, el resultado más marcado aparece en *Aedes aegypti*. En esta especie, **Grinding stones** presentó la mayor abundancia esperada.
 
 Para la abundancia total, las diferencias entre microhábitats fueron menos claras. En *Aedes albopictus* tampoco apareció un microhábitat claramente dominante, aunque algunas categorías mostraron valores más altos con mayor incertidumbre.
 
 Este gráfico es importante porque permite identificar tipos concretos de criaderos que podrían ser más relevantes para la producción de mosquitos.
+
+### Variables ambientales
+
+Además de estación y microhábitat, los modelos incluyeron temperatura, pH y volumen transformado. Estos efectos no fueron iguales para todas las respuestas.
+
+| Respuesta          | Temperatura      | pH               | Volumen          |
+|--------------------|------------------|------------------|------------------|
+| Abundancia total   | Efecto negativo  | Sin efecto claro | Sin efecto claro |
+| *Aedes aegypti*    | Sin efecto claro | Sin efecto claro | Sin efecto claro |
+| *Aedes albopictus* | Sin efecto claro | Efecto positivo  | Efecto negativo  |
+
+**Tabla 3: Resumen de resultados de variables ambientales del microhabitat**
+
+Para la abundancia total, la temperatura mostró un efecto negativo. Para *Aedes aegypti*, ninguna de las variables ambientales mostró un efecto claro. Para *Aedes albopictus*, el pH mostró un efecto positivo y el volumen un efecto negativo.
+
+Esto indica que las variables ambientales no tuvieron un patrón único para todas las respuestas.
+
+------------------------------------------------------------------------
 
 ## 7. Conclusiones del modelado de abundancia
 

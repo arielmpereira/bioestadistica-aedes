@@ -361,7 +361,7 @@ El informe principal resume el recorrido y los resultados más importantes del a
     <https://github.com/arielmpereira/bioestadistica-aedes/blob/main/modelado_abundancia_aedes_v3.pdf>
 
 -   **Anexo 3. Interpretación completa de los summaries de los seis modelos**\
-    <https://github.com/arielmpereira/bioestadistica-aedes/blob/main/Anexo%20A%20interpretacion%20modelos.md>
+    <https://github.com/arielmpereira/bioestadistica-aedes/blob/main/Interpretacion_modelos.md>
 
 -   **Anexo 4. Comprendiendo ceros falsos, estructurales y aleatorios en ecología**\
     <https://github.com/arielmpereira/bioestadistica-aedes/blob/main/modelos_exceso_ceros.md>

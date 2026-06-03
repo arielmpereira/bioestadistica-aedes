@@ -259,3 +259,23 @@ La parte de inflación de ceros fue importante para mejorar el ajuste de los mod
 Este recorrido muestra que la abundancia total permite ver el patrón general, pero que separar por especie aporta información más específica. Al mismo tiempo, al separar por especie aumentan los ceros y la incertidumbre, por lo que las conclusiones sobre *Aedes aegypti* y especialmente sobre *Aedes albopictus* deben leerse con más cautela.
 
 # 8. Anexos
+
+El informe principal resume el recorrido y los resultados más importantes del análisis. Para no sobrecargar el texto con salidas extensas de código, gráficos exploratorios y explicaciones técnicas, dejamos como anexos los documentos de trabajo que respaldan cada etapa del análisis.
+
+-   **Anexo 1. Análisis exploratorio siguiendo la lógica de Zuur**\
+    <https://github.com/arielmpereira/bioestadistica-aedes/blob/main/AE_Zuur.pdf>
+
+-   **Anexo 2. Modelado de abundancia**\
+    <https://github.com/arielmpereira/bioestadistica-aedes/blob/main/modelado_abundancia_aedes_v3.pdf>
+
+-   **Anexo 3. Interpretación completa de los summaries de los seis modelos**\
+    <https://github.com/arielmpereira/bioestadistica-aedes/blob/main/Anexo%20A%20interpretacion%20modelos.md>
+
+-   **Anexo 4. Comprendiendo ceros falsos, estructurales y aleatorios en ecología**\
+    <https://github.com/arielmpereira/bioestadistica-aedes/blob/main/modelos_exceso_ceros.md>
+
+-   **Anexo 5. Tutorial de emmeans**\
+    <https://github.com/arielmpereira/bioestadistica-aedes/blob/main/Tutorial%20emmeans.pdf>
+
+-   **Anexo 6. Entendiendo DHARMa**\
+    <https://github.com/arielmpereira/bioestadistica-aedes/blob/main/Entendiendo_dharma.md>

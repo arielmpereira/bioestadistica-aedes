@@ -12,6 +12,8 @@ knitr::opts_chunk$set(
 )
 ```
 
+<https://strengejacke.github.io/sjPlot/articles/plot_model_estimates.html>
+
 # Introducción
 
 Este archivo documenta el proceso de modelado de abundancia de mosquitos en criaderos urbanos, a partir de datos del estudio sobre ecología de larvas de *Aedes* en Bengaluru, India.
@@ -251,8 +253,8 @@ digraph seleccion_modelos {
   D2 [label = 'Modelo de microhábitat + condiciones\nPregunta: criadero y condiciones internas']
   E1 [label = 'Diagnóstico DHARMa']
   E2 [label = 'Diagnóstico DHARMa']
-  F1 [label = 'Inferencias del modelo macro']
-  F2 [label = 'Inferencias del modelo micro\nsummary + emmeans']
+  F1 [label = 'Inferencias del modelo\nsummary + emmeans']
+  F2 [label = 'Inferencias del modelo\nsummary + emmeans']
 
   A -> B -> C
   C -> D1 -> E1 -> F1
@@ -361,7 +363,7 @@ AIC(modelo_albopictus_pois, modelo_albopictus_nb, modelo_albopictus_zinb_base)
 ## Resumen de la comparación base
 
 | **Respuesta** | **Total mosquito emerged** | **Aedes aegypti** | **Aedes albopictus** |
-|------------------|-------------------|------------------|------------------|
+|----|----|----|----|
 | **Poisson** | 4123 | 2721 | 1329 |
 | **NB** | 1850 | 1067 | 584 |
 | **ZINB** | 1804 | 1059 | 568 |

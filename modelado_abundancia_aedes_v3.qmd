@@ -364,15 +364,15 @@ AIC(modelo_albopictus_pois, modelo_albopictus_nb, modelo_albopictus_zinb_base)
 
 ## Resumen de la comparación base
 
-+-----------------+----------------------------+-------------------+----------------------+
-| **Respuesta**   | **Total mosquito emerged** | **Aedes aegypti** | **Aedes albopictus** |
-+=================+============================+===================+======================+
-| **Poisson**     | 4123                       | 2721              | 1329                 |
-+-----------------+----------------------------+-------------------+----------------------+
-| **NB**          | 1850                       | 1067              | 584                  |
-+-----------------+----------------------------+-------------------+----------------------+
-| **ZINB**        | 1804                       | 1059              | 568                  |
-+-----------------+----------------------------+-------------------+----------------------+
++---------------+----------------------------+-------------------+----------------------+
+| **Respuesta** | **Total mosquito emerged** | **Aedes aegypti** | **Aedes albopictus** |
++===============+============================+===================+======================+
+| **Poisson**   | 4123                       | 2721              | 1329                 |
++---------------+----------------------------+-------------------+----------------------+
+| **NB**        | 1850                       | 1067              | 584                  |
++---------------+----------------------------+-------------------+----------------------+
+| **ZINB**      | 1804                       | 1059              | 568                  |
++---------------+----------------------------+-------------------+----------------------+
 
 : Los modelos ZINB presentan el menor AIC en las tres respuestas. Por lo tanto, para continuar el análisis se utlizan **modelos binomiales negativos inflados en cero**, especialmente porque permiten modelar dos procesos: la abundancia esperada y la probabilidad de ceros extra.
 
@@ -516,6 +516,7 @@ Por eso, primero interpretamos en detalle el modelo de macrohábitat para abunda
 
 ```{r}
 summary(modelo_total_macro)
+
 ```
 
 La parte condicional estima la abundancia esperada de mosquitos emergidos, mientras que la parte de inflación de ceros modela la presencia de ceros adicionales.
@@ -638,6 +639,8 @@ Estas preguntas son útiles para interpretar el problema desde una mirada ecoló
 
 Este gráfico permite comparar si el patrón estacional es parecido entre la abundancia total y las especies principales.
 
+Las estimaciones de **emmeans** se interpretan como abundancia esperada de mosquitos emergidos por criadero, ya que la unidad de análisis del modelo es cada criadero registrado en la base.
+
 ```{r}
 #| echo: false
 
@@ -686,6 +689,7 @@ ggplot(emm_season_todas, aes(x = response, y = Season)) +
     subtitle = "Estimaciones del modelo ZINB en escala de respuesta"
   ) +
   theme_minimal()
+
 ```
 
 En la abundancia total se observa una mayor abundancia esperada en feb-march. Este patrón también aparece para *Aedes aegypti*, aunque con más incertidumbre. En *Aedes albopictus*, el patrón estacional es menos claro.
@@ -744,6 +748,7 @@ ggplot(emm_microhab_todas, aes(x = response, y = Microhabitat)) +
     subtitle = "Estimaciones del modelo ZINB en escala de respuesta"
   ) +
   theme_minimal()
+
 ```
 
 El resultado más marcado aparece en *Aedes aegypti*, donde Grinding stones muestra mayor abundancia esperada. En la abundancia total, las diferencias entre microhábitats no son tan claras. En *Aedes albopictus*, tampoco aparecen diferencias fuertes entre microhábitats, aunque Pots queda como una categoría a observar.

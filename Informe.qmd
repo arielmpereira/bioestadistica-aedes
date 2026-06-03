@@ -158,9 +158,63 @@ Esto fue importante porque los modelos usan enlace log. Entonces, los coeficient
 
 ## 5. Diagnóstico de modelos
 
+Luego del ajuste de los seis modelos finales, revisamos los residuos simulados con DHARMa.
+
+Como se ajustaron seis modelos, en el informe resumimos los diagnósticos en una tabla general y la siguiente imágen muestra un gráfico representativo. En este caso se trata del diagnóstico del modelo Macrohabitat para la abundancia total.
+
+Los gráficos completos de residuos se dejan en QMD del modelado de abundancia includo en el anexo del informe.
+
+![](images/clipboard-605720505.png)
+
+Figura : Diagnostico con DHARMa del modelo macrohabitat de abundancia total
+
+### Tabla resumen de diagnosticos por DHARMa de los 6 modelos
+
+| Respuesta | Modelo | Uniformidad | Dispersión | Exceso de ceros | Lectura general |
+|----|----|----|----|----|----|
+| Total | Macro | ok | ok | ok | ajuste razonable |
+| Total | Micro + ambiente | ok | ok | ok | ajuste razonable |
+| *Aedes aegypti* | Macro | ok | ok | ok | ajuste razonable |
+| *Aedes aegypti* | Micro + ambiente | ok | leve señal / ok | ok | ajuste aceptable |
+| *Aedes albopictus* | Macro | ok | ok | ok | ajuste razonable |
+| *Aedes albopictus* | Micro + ambiente | ok | ok | ok | ajuste razonable |
+
+Tabla: Resumen de los diagnósticos por DHARMa de los 6 modelos
+
+En términos generales, los diagnósticos no mostraron problemas suficientemente graves como para descartar la estrategia de modelado elegida. Por eso continuamos con la interpretación de los modelos ZINB.
+
 ## 6. Resultados principales
 
-## 
+Una vez ajustados y diagnosticados los modelos, el paso siguiente fue interpretar los resultados en una escala más clara. Los `summary()` de los modelos permiten revisar coeficientes, dirección de los efectos y significancia, pero esos coeficientes están en escala logarítmica. Por eso no son la forma más directa de comunicar los resultados.
+
+Para facilitar la interpretación usamos **emmeans**, que permite obtener medias estimadas en escala de respuesta. En este caso, las estimaciones se interpretan como abundancia esperada de mosquitos emergidos por criadero.
+
+Nos enfocamos en dos preguntas aplicadas:
+
+1.  ¿En qué estación se espera mayor abundancia de mosquitos?
+2.  ¿En qué tipo de microhábitat se espera mayor abundancia?
+
+Estas preguntas son útiles porque permiten pasar del modelo estadístico a una lectura ecológica y sanitaria: cuándo aparecen más mosquitos y qué tipos de criaderos podrían ser más productivos.
+
+### 6.1 Abundancia esperada por estación y especie
+
+![](images/clipboard-4242840250.png)
+
+La abundancia esperada por estación mostró que el patrón más claro aparece en la abundancia total y en *Aedes aegypti*. En ambos casos, `feb-march` presentó los valores esperados más altos.
+
+En *Aedes albopictus*, el patrón estacional fue menos claro. Esto coincide con lo observado en los modelos: al separar por especie aumenta la proporción de ceros y las estimaciones se vuelven más inciertas.
+
+Este resultado indica que la estación parece ser un factor importante para la abundancia total y para *Aedes aegypti*, pero no se observa con la misma claridad en *Aedes albopictus*.
+
+### 6.2 Abundancia esperada por microhábitat y especie
+
+![](images/clipboard-3710672220.png)
+
+Al analizar los microhábitats, el resultado más marcado aparece en *Aedes aegypti*. En esta especie, `Grinding stones` presentó la mayor abundancia esperada.
+
+Para la abundancia total, las diferencias entre microhábitats fueron menos claras. En *Aedes albopictus* tampoco apareció un microhábitat claramente dominante, aunque algunas categorías mostraron valores más altos con mayor incertidumbre.
+
+Este gráfico es importante porque permite identificar tipos concretos de criaderos que podrían ser más relevantes para la producción de mosquitos.
 
 ## 7. Conclusiones del modelado de abundancia
 
